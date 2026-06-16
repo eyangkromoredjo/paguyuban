@@ -164,6 +164,32 @@
       font-style: italic;
     }
 
+    /* Password Toggle Styling */
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-wrapper input {
+      padding-right: 45px !important;
+    }
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--coklat-terang);
+      cursor: pointer;
+      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      font-size: 1.1rem;
+      transition: color 0.2s;
+    }
+    .toggle-password:hover { color: var(--emas); }
+
     /* ══════════════════════════════════
        APP LAYOUT
     ══════════════════════════════════ */
@@ -851,7 +877,10 @@
     </div>
     <div class="form-group">
       <label>Kata Sandi</label>
-      <input type="password" id="input-pass" placeholder="Masukkan kata sandi" onkeydown="if(event.key==='Enter')login()"/>
+      <div class="password-wrapper">
+        <input type="password" id="input-pass" placeholder="Masukkan kata sandi" onkeydown="if(event.key==='Enter')login()"/>
+        <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('input-pass', this)">👁️</button>
+      </div>
     </div>
 
     <div class="pesan-error" id="pesan-error">Nama pengguna atau kata sandi salah.</div>
@@ -1379,6 +1408,17 @@
 
   // ══ CEK SESSION ══
   window.addEventListener('load', async () => {
+
+  window.togglePasswordVisibility = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁️';
+    }
+  };
     const saved = sessionStorage.getItem('kromoredjo_user');
     if (saved) {
       penggunaLogin = JSON.parse(saved);

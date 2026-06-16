@@ -22,7 +22,7 @@
     .nav-item:hover{color:var(--kr);background:rgba(201,168,76,.06)}
     .nav-item.aktif{color:var(--em);border-left-color:var(--em);background:rgba(201,168,76,.08)}
     .nav-item .ni{font-size:1rem;width:1.2rem;text-align:center}
-    .konten-utama{margin-left:240px;flex:1;min-height:100vh;padding:2rem}
+    .konten-utama{margin-left:0;flex:1;min-height:100vh;padding:2rem}
     .topbar{padding:1.2rem 2.5rem;border-bottom:1px solid rgba(201,168,76,.1);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(59,31,14,.95);backdrop-filter:blur(10px);z-index:50;margin:-2rem -2rem 2rem -2rem; gap: 1rem;}
     .topbar-judul{font-family:'Cinzel',serif;font-size:1.1rem;letter-spacing:.15em;color:var(--em);text-transform:uppercase;font-weight:600}
     .topbar-user{font-size:.9rem;color:var(--cb);font-style:italic;text-align:right;line-height:1.2; margin-right: 0.5rem;}
@@ -126,58 +126,11 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <!-- Overlay mobile -->
-  <div class="overlay-sidebar" id="overlay-sidebar" onclick="tutupSidebar()"></div>
-
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <img src="logo PKEK.jpg" alt="Logo" class="sidebar-logo-img">
-      <p class="sidebar-logo">Paguyuban Keluarga</p>
-      <p class="sidebar-nama">Eyang<br>Kromoredjo</p>
-    </div>
-    <div class="sidebar-nav">
-      <p class="nav-label">Menu Utama</p>
-      <div class="nav-item" onclick="location.href='dashboard.html'"><span class="ni">🏠</span> Beranda</div>
-      <div id="nav-pengurus" style="display:none">
-        <div class="nav-item" onclick="location.href='dashboard.html#anggota'"><span class="ni">👥</span> Anggota</div>
-        
-        <!-- TOMBOL INDUK MANAJEMEN ARISAN -->
-        <div class="nav-item" id="nav-induk-arisan" onclick="window.toggleArisanSubmenu()" style="justify-content: space-between;">
-          <div style="display:flex; align-items:center; gap:.8rem;">
-            <span class="ni">💰</span> Manajemen Arisan
-          </div>
-          <span id="arisan-chevron" style="font-size: 0.6rem; transition: 0.3s; transform: rotate(-90deg);">▼</span>
-        </div>
-
-        <!-- KONTAINER SUB-MENU -->
-        <div id="arisan-submenu" style="max-height: 0px; opacity: 0; background: rgba(0,0,0,0.2); margin-bottom: 0; border-left: 2px solid var(--em); margin-left: 1.2rem;">
-          <div class="nav-item" onclick="location.href='modules/arisan.html#aturan'"><span class="ni">📜</span> Aturan</div>
-          <div class="nav-item" onclick="location.href='modules/arisan.html#peserta'"><span class="ni">👥</span> Peserta</div>
-          <div class="nav-item" id="sub-nav-iuran-arisan" onclick="location.href='modules/arisan.html#iuran'"><span class="ni">💳</span> Iuran</div>
-          <div class="nav-item" id="sub-nav-pengeluaran-arisan" onclick="location.href='modules/arisan.html#pengeluaran'"><span class="ni">📉</span> Pengeluaran</div>
-          <div class="nav-item" id="sub-nav-tipe-arisan" onclick="location.href='modules/arisan.html#tipe'"><span class="ni">⚙️</span> Tipe</div>
-          <div class="nav-item" id="sub-nav-penerima-arisan" onclick="location.href='modules/arisan.html#penerima'"><span class="ni">📅</span> Penerima</div>
-        </div>
-
-        <div class="nav-item" id="nav-bukubesar" onclick="location.href='bukubesar.html'"><span class="ni">📖</span> Buku Besar</div>
-        <div class="nav-item aktif" onclick="tutupSidebar()"><span class="ni">🌳</span> Silsilah</div>
-
-        <div class="nav-item" id="nav-induk-laporan" onclick="location.href='modules/laporan.html'"><span class="ni">📊</span> Laporan Keuangan</div>
-        <div class="nav-item" id="nav-logs" style="display:none" onclick="location.href='dashboard.html#logs'"><span class="ni">📋</span> Log Aktivitas</div>
-      </div>
-    </div>
-    <div class="sidebar-footer">
-      <p class="sidebar-level" id="sidebar-level"></p>
-      <button id="btn-keluar-sidebar" class="tombol-keluar" onclick="window.keluar()" style="display:none">✦ Keluar</button>
-      <p style="font-size: 0.5rem; color: var(--cb); text-align: center; margin-top: 1rem; opacity: 0.6; font-family: 'Cinzel'; letter-spacing: 1px;">Sistem oleh Budi Purwanto bin Tukimin · 2025</p>
-    </div>
-  </nav>
 
   <main class="konten-utama">
     <div class="topbar">
       <div style="display:flex; align-items:center;">
-        <button class="btn-back" onclick="location.href='dashboard.html'">❮</button>
-        <button class="hamburger" onclick="bukaSidebar()" style="display: block;">☰</button>
+        <button class="btn-back" onclick="history.back()">❮</button>
       </div>
       <p class="topbar-judul">Pohon Silsilah <em>Keluarga</em></p>
       <p class="topbar-user" id="topbar-user"></p>

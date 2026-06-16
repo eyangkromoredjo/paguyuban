@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { ref, get, set, push, remove, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { ref, get, set, update, push, remove, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { formatRp, toast, cleanNumber, applyMask } from './utils.js';
 
 // Define HAK_AKSES and penggunaLogin for this module
@@ -26,15 +26,15 @@ async function catatLog(aksi, detail = "") {
 }
 
 // Helper functions for UI
-window.bukaModal = (id) => document.getElementById(id).classList.add('aktif');
-window.tutupModal = (id) => document.getElementById(id).classList.remove('aktif');
-window.bukaSidebar = () => {
-  document.getElementById('sidebar').classList.add('buka');
-  document.getElementById('overlay-sb').classList.add('aktif');
+window.bukaModal = (id) => {
+  document.getElementById(id).classList.add('aktif');
+  // Catat state modal di history agar tombol back bisa menutupnya
+  history.pushState({ modalId: id }, "", "#modal-" + id);
 };
-window.tutupSidebar = () => {
-  document.getElementById('sidebar').classList.remove('buka');
-  document.getElementById('overlay-sb').classList.remove('aktif');
+
+window.tutupModal = (id, skipHistory = false) => {
+  document.getElementById(id).classList.remove('aktif');
+  if (!skipHistory && window.location.hash.includes("modal-")) history.back();
 };
 
 window.toggleArisanSubmenu = function() {
@@ -160,18 +160,20 @@ window.renderBukuBesar = async function() {
     const isMasuk = t.tipe === 'masuk';
     if (isMasuk) totalMasuk += t.jumlah; else totalKeluar += t.jumlah;
     const fotoHtml = t.foto ? `<button class="btn-sm" style="font-size:0.65rem; padding:4px 8px;" onclick="window.lihatBukti('${t.id}')">🖼️ Lihat</button>` : '<span style="opacity:0.3; font-size:0.7rem">-</span>';
+    const isLocked = ['Tabungan', 'Sosial'].includes(t.kategori);
 
     html += `
       <tr>
-        <td style="white-space:nowrap">${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+        <td style="white-space:nowrap">${t.tanggal.split('-').reverse().join('/')}</td>
         <td>${t.deskripsi}<br><small style="color:var(--cb); font-size:0.7rem">Oleh: ${t.inputOleh || 'Admin'}</small></td>
         <td style="text-align:center">${fotoHtml}</td>
         <td><span class="badge" style="background:rgba(201,168,76,0.1); color:var(--el)">${t.kategori}</span></td>
-        <td class="txt-masuk">${isMasuk ? formatRp(t.jumlah) : '-'}</td>
-        <td class="txt-keluar">${!isMasuk ? formatRp(t.jumlah) : '-'}</td>
+        <td class="txt-masuk" style="color: ${isMasuk ? '#2e7d32' : 'inherit'}; font-weight: 600;">${isMasuk ? formatRp(t.jumlah) : '-'}</td>
+        <td class="txt-keluar" style="color: ${!isMasuk ? '#c62828' : 'inherit'}; font-weight: 600;">${!isMasuk ? formatRp(t.jumlah) : '-'}</td>
         <td style="text-align:center; white-space:nowrap;">
-          ${canEdit ? `<button class="btn-sm" onclick="window.bukaEditTransaksi('${t.id}')">Edit</button>` : ''}
-          ${canHapus ? `<button class="btn-sm danger" onclick="window.hapusTransaksi('${t.id}')">Hapus</button>` : ''}
+          ${(canEdit && !isLocked) ? `<button class="btn-sm" onclick="window.bukaEditTransaksi('${t.id}')">Edit</button>` : ''}
+          ${(canHapus && !isLocked) ? `<button class="btn-sm danger" onclick="window.hapusTransaksi('${t.id}')">Hapus</button>` : ''}
+          ${isLocked ? '<span style="font-size:0.65rem; opacity:0.6; font-style:italic;">🔒 Sistem</span>' : ''}
         </td>
       </tr>`;
   });
@@ -223,6 +225,8 @@ window.simpanTransaksi = async function() {
   const tip = document.querySelector('input[name="trx-tipe"]:checked').value;
 
   if (!tgl || !dsk || isNaN(jml)) return toast('Harap isi semua field transaksi.');
+  
+  if (['Tabungan', 'Sosial'].includes(kat)) return toast('Kategori Sosial/Tabungan hanya bisa diinput via Manajemen Arisan.');
 
   const trxData = {
     tanggal: tgl, deskripsi: dsk, jumlah: jml, kategori: kat, tipe: tip, foto: fot,
@@ -234,7 +238,7 @@ window.simpanTransaksi = async function() {
     trxData.createdAt = Date.now();
     await set(newTrxRef, trxData);
   } else {
-    await set(ref(db, `transaksi/${id}`), trxData);
+    await update(ref(db, `transaksi/${id}`), trxData);
   }
 
   window.tutupModal('modal-transaksi');
@@ -446,15 +450,9 @@ function initBukuBesarPage() {
     // Setup UI based on level
     const levelMap = { admin: '👑 Admin', pengurus: '🛡️ Pengurus', anggota: '🔑 Anggota', guest: '👤 Tamu' };
     const roleText = levelMap[penggunaLogin.level] || '';
-    document.getElementById('sidebar-level').textContent = roleText; // Menambahkan ikon ke footer sidebar
+    
     document.getElementById('topbar-user').innerHTML = `${roleText}<br>${penggunaLogin.username}`; // Menggunakan username dan menambahkan ikon
-    document.getElementById('btn-keluar-sidebar').style.display = 'block';
-    // Hide login button if already logged in
-    const navPengurus = document.getElementById('nav-pengurus');
-    if(navPengurus) navPengurus.style.display = 'block';
 
-    const btnLoginSidebar = document.getElementById('btn-login-sidebar');
-    if (btnLoginSidebar) btnLoginSidebar.style.display = 'none';
 
     const navLogs = document.getElementById('nav-logs');
     if(navLogs) navLogs.style.display = penggunaLogin.level === 'admin' ? 'block' : 'none';
@@ -486,5 +484,27 @@ window.keluar = function() {
 window.tampilLogin = function() {
   window.location.href = 'dashboard.html'; // Redirect to dashboard login
 };
+
+window.togglePasswordVisibility = function(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const eyeOffIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`;
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.innerHTML = eyeOffIcon;
+  } else {
+    input.type = 'password';
+    btn.innerHTML = eyeIcon;
+  }
+};
+
+// Listener untuk navigasi tombol back (Hardware/Browser Back)
+window.addEventListener('popstate', (e) => {
+  // Jika ada modal yang terbuka, tutup semua modal
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.classList.remove('aktif');
+  });
+});
 
 window.addEventListener('load', initBukuBesarPage);

@@ -18,60 +18,19 @@
 
 <!-- APP (Minimal structure for Buku Besar page) -->
 <div id="halaman-app" class="halaman aktif">
-  <div class="overlay-sb" id="overlay-sb" onclick="window.tutupSidebar()"></div>
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <img src="logo PKEK.jpg" alt="Logo" class="sidebar-logo-img">
-      <p class="sidebar-logo">Paguyuban Keluarga</p>
-      <p class="sidebar-nama">Eyang<br>Kromoredjo</p>
-    </div>
-    <div class="sidebar-nav">
-      <p class="nav-label">Menu Utama</p>
-      <div class="nav-item" onclick="location.href='dashboard.html'"><span class="ni">🏠</span> Beranda</div>
-      <div id="nav-pengurus" style="display:none">
-        <div class="nav-item" onclick="location.href='dashboard.html#anggota'"><span class="ni">👥</span> Anggota</div>
-        
-        <!-- TOMBOL INDUK MANAJEMEN ARISAN (ACCORDION) -->
-        <div class="nav-item" id="nav-induk-arisan" onclick="window.toggleArisanSubmenu()" style="justify-content: space-between;">
-          <div style="display:flex; align-items:center; gap:.8rem;">
-            <span class="ni">💰</span> Manajemen Arisan
-          </div>
-          <span id="arisan-chevron" style="font-size: 0.6rem; transition: 0.3s; transform: rotate(-90deg);">▼</span>
-        </div>
-
-        <!-- KONTAINER SUB-MENU -->
-        <div id="arisan-submenu" style="max-height: 0px; opacity: 0; background: rgba(0,0,0,0.2); margin-bottom: 0; border-left: 2px solid var(--em); margin-left: 1.2rem;">
-          <div class="nav-item" onclick="location.href='modules/arisan.html#aturan'"><span class="ni">📜</span> Aturan</div>
-          <div class="nav-item" onclick="location.href='modules/arisan.html#peserta'"><span class="ni">👥</span> Peserta</div>
-          <div class="nav-item" id="sub-nav-iuran-arisan" onclick="location.href='modules/arisan.html#iuran'"><span class="ni">💳</span> Iuran</div>
-          <div class="nav-item" id="sub-nav-pengeluaran-arisan" onclick="location.href='modules/arisan.html#pengeluaran'"><span class="ni">📉</span> Pengeluaran</div>
-          <div class="nav-item" id="sub-nav-tipe-arisan" onclick="location.href='modules/arisan.html#tipe'"><span class="ni">⚙️</span> Tipe</div>
-          <div class="nav-item" id="sub-nav-penerima-arisan" onclick="location.href='modules/arisan.html#penerima'"><span class="ni">📅</span> Penerima</div>
-        </div>
-
-        <div class="nav-item aktif" onclick="window.tutupSidebar()"><span class="ni">📖</span> Buku Besar</div>
-        <div class="nav-item" onclick="location.href='silsilah.html'"><span class="ni">🌳</span> Silsilah</div>
-
-        <div class="nav-item" id="nav-induk-laporan" onclick="location.href='modules/laporan.html'"><span class="ni">📊</span> Laporan Keuangan</div>
-
-        <div class="nav-item" id="nav-logs" style="display:none" onclick="location.href='dashboard.html#logs'"><span class="ni">📋</span> Log Aktivitas</div>
-      </div>
-    </div>
-    <div class="sidebar-footer">
-      <p class="sidebar-level" id="sidebar-level"></p>
-      <button id="btn-keluar-sidebar" class="tombol-keluar" onclick="window.keluar()" style="display:none">✦ Keluar</button>
-      <p style="font-size: 0.5rem; color: var(--cb); text-align: center; margin-top: 1rem; opacity: 0.6; font-family: 'Cinzel'; letter-spacing: 1px;">Sistem oleh Budi Purwanto bin Tukimin · 2025</p>
-    </div>
-  </nav>
 
   <main class="konten-utama">
     <div class="topbar">
-      <div style="display:flex; align-items:center;">
-        <button class="btn-back" onclick="location.href='dashboard.html'">❮</button>
-        <button class="hamburger" onclick="window.bukaSidebar()" style="display: block;">☰</button>
+      <div class="topbar-inner">
+        <div style="display:flex; align-items:center;">
+          <button class="btn-back" onclick="history.back()">❮</button>
+        </div>
+        <p class="topbar-judul" id="topbar-judul">Buku Besar Keuangan</p>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <p class="topbar-user" id="topbar-user" style="text-align:right; margin:0; line-height:1.2; font-size:0.75rem;"></p>
+          <button onclick="window.keluar()" title="Keluar" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:0.2s;">🚪</button>
+        </div>
       </div>
-      <p class="topbar-judul" id="topbar-judul">Buku Besar Keuangan</p>
-      <p class="topbar-user" id="topbar-user"></p>
     </div>
 
     <!-- BUKU BESAR (LEDGER) PANEL -->
@@ -166,9 +125,9 @@
             <label>Kategori</label>
             <select id="trx-kategori">
               <option value="Saldo Awal">Saldo Awal / Rekap</option>
-              <option value="Sosial">Dana Sosial</option>
+            <option value="Sosial" disabled>Dana Sosial (Otomatis Arisan)</option>
               <option value="kas">Kas</option>
-              <option value="Tabungan">Tabungan Mandiri</option>
+            <option value="Tabungan" disabled>Tabungan Mandiri (Otomatis Arisan)</option>
               <option value="Operasional">Operasional/Lainnya</option>
             </select>
           </div>
@@ -232,7 +191,10 @@
     </div>
     <div class="modal-body">
       <p class="konfirm-teks" style="margin-bottom:1rem">PERINGATAN: Ini akan menghapus SELURUH catatan Buku Besar secara permanen.<br>Masukkan kata sandi otorisasi:</p>
-      <input type="password" id="input-password-ledger" class="search-box" style="width:100%; background:rgba(0,0,0,0.2); border-color:var(--em); color:white; padding:0.8rem" placeholder="Kata sandi..." onkeydown="if(event.key==='Enter') window.konfirmasiBersihkanLedger()">
+      <div class="password-wrapper">
+        <input type="password" id="input-password-ledger" class="search-box" style="width:100%; background:rgba(0,0,0,0.2); border-color:var(--em); color:white; padding:0.8rem" placeholder="Kata sandi..." onkeydown="if(event.key==='Enter') window.konfirmasiBersihkanLedger()">
+        <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('input-password-ledger', this)">👁️</button>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-batal" onclick="window.tutupModal('modal-otorisasi-ledger')">Batal</button>

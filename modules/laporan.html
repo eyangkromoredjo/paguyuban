@@ -11,7 +11,7 @@
     <style>
         /* Sync and Overrides for Laporan Module */
         body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text-dark); }
-        .konten-utama { margin-left: 240px; min-height: 100vh; background: var(--bg); }
+        .konten-utama { margin-left: 0; min-height: 100vh; background: var(--bg); }
         .main-content { padding: 1.5rem; }
 
         /* Re-style Sections as DANA Cards */
@@ -21,10 +21,10 @@
         .panel h3 em { color: var(--primary); font-style: normal; }
 
         /* Table Styles Sync */
-        .table-wrapper { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: #fff; }
-        table { border: none; font-size: 0.85rem; color: var(--text-dark); background: transparent; }
-        th { background: #f8fafc; font-family: 'Outfit', sans-serif; font-size: .68rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; border-bottom: 2px solid var(--border); padding: 1rem .8rem; }
-        td { border-bottom: 1px solid var(--border); color: var(--text-dark); padding: .9rem .8rem; }
+        .table-wrapper { border-radius: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); background: #fff; }
+        table { border: none; font-size: 0.85rem; color: var(--text-dark); background: transparent; width: 100%; }
+        th { background: #f8fafc; font-family: 'Outfit', sans-serif; font-size: .68rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; border-bottom: 2px solid var(--border); padding: 1rem .8rem; white-space: nowrap; }
+        td { border-bottom: 1px solid var(--border); color: var(--text-dark); padding: .9rem .8rem; white-space: nowrap; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
 
@@ -90,35 +90,21 @@
     </style>
 </head>
 <body>
-    <div class="overlay-sb" id="overlay-sb" onclick="window.tutupSidebar()"></div>
-    <nav class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <img src="../logo PKEK.jpg" alt="Logo" class="sidebar-logo-img">
-            <p class="sidebar-logo">Paguyuban Keluarga</p>
-            <p class="sidebar-nama">Eyang<br>Kromoredjo</p>
-        </div>
-        <div class="sidebar-nav">
-            <p class="nav-label">Menu Utama</p>
-            <div class="nav-item" onclick="location.href='../dashboard.html'"><span class="ni">🏠</span> Beranda</div>
-            <div class="nav-item" onclick="location.href='arisan.html'"><span class="ni">💰</span> Manajemen Arisan</div>
-            <div class="nav-item aktif" id="nav-induk-laporan" onclick="window.showSection('section-laporan-menu', this)">
-                <div style="display:flex; align-items:center; gap:.8rem;"><span class="ni">📊</span> Laporan Keuangan</div>
-            </div>
-        </div>
-        <div class="sidebar-footer">
-            <p class="sidebar-level" id="sidebar-level"></p>
-            <button id="btn-keluar-sidebar" class="tombol-keluar" onclick="window.keluar()" style="display:none">✦ Keluar</button>
-        </div>
-    </nav>
-
     <main class="konten-utama">
         <div class="topbar">
-            <div style="display:flex; align-items:center;">
-                <button class="btn-back" onclick="location.href='../dashboard.html'">❮</button>
-                <button class="hamburger" onclick="window.bukaSidebar()" style="display: block;">☰</button>
+            <div class="topbar-inner">
+              <div style="display:flex; align-items:center;">
+                  <button class="btn-back" onclick="history.back()">❮</button>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+                <p class="topbar-judul" id="topbar-judul" style="margin:0;">Laporan Keuangan</p>
+                <p id="topbar-subtitle" style="font-size:0.6rem; color:rgba(255,255,255,0.7); margin:0; font-family:'Inter'; text-transform:uppercase; letter-spacing:1px; font-weight:600;"></p>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <p class="topbar-user" id="topbar-user" style="text-align:right; margin:0; line-height:1.2; font-size:0.75rem;"></p>
+                <button onclick="window.keluar()" title="Keluar" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:0.2s;">🚪</button>
+              </div>
             </div>
-            <p class="topbar-judul">Laporan Keuangan</p>
-            <p class="topbar-user" id="topbar-user"></p>
         </div>
 
         <div class="main-content">
@@ -153,7 +139,7 @@
 
             <!-- SECTION: OVERVIEW -->
             <div id="section-overview" class="report-section" style="display:none">
-                <div class="stats-grid">
+                <div class="stats-grid" style="grid-template-columns: 1fr;">
                     <div class="stat-card" style="grid-column: 1 / -1; border-top: 4px solid var(--primary);">
                         <span class="stat-lbl">Saldo Kas Paguyuban</span>
                         <div class="stat-num" id="val-saldo-akhir" style="font-size: 2.2rem;">Rp 0</div>
@@ -309,21 +295,24 @@
 
             // Sinkronisasi Panel berdasarkan hash URL (Misal: laporan.html#iuran)
             const hash = window.location.hash.substring(1);
-            if (hash) {
-                const sectionMap = { 
-                    'overview': 'section-overview', 'iuran': 'section-iuran', 
-                    'pengeluaran': 'section-pengeluaran', 'siklus': 'section-siklus', 
-                    'putaran': 'section-putaran' 
-                };
-                if (sectionMap[hash]) {
-                    const restricted = ['iuran', 'pengeluaran', 'siklus', 'putaran'];
-                    if (user.level !== 'anggota' || !restricted.includes(hash)) {
-                        window.showSection(sectionMap[hash], document.getElementById('btn-' + hash));
-                    }
+            const sectionMap = { 
+                'overview': 'section-overview', 'iuran': 'section-iuran', 
+                'pengeluaran': 'section-pengeluaran', 'siklus': 'section-siklus', 
+                'putaran': 'section-putaran', 'menu': 'section-laporan-menu'
+            };
+
+            if (hash && sectionMap[hash]) {
+                const restricted = ['iuran', 'pengeluaran', 'siklus', 'putaran'];
+                if (user.level !== 'anggota' || !restricted.includes(hash)) {
+                    history.replaceState({ section: sectionMap[hash] }, "", "#" + hash);
+                    window.showSection(sectionMap[hash], document.getElementById('menu-' + hash), false);
+                } else {
+                    history.replaceState({ section: 'section-laporan-menu' }, "", "#menu");
+                    window.showSection('section-laporan-menu', null, false);
                 }
             } else {
-                // Default view is the icon grid menu
-                window.showSection('section-laporan-menu');
+                history.replaceState({ section: 'section-laporan-menu' }, "", "#menu");
+                window.showSection('section-laporan-menu', null, false);
             }
 
             onValue(ref(db, "anggota"), (snap) => {
@@ -362,16 +351,6 @@
                 if (topbarUserEl) topbarUserEl.innerHTML = `${roleText}<br>${user.username}`;
             }
         }
-
-        window.bukaSidebar = function() {
-            document.getElementById('sidebar').classList.add('buka');
-            document.getElementById('overlay-sb').classList.add('aktif');
-        };
-
-        window.tutupSidebar = function() {
-            document.getElementById('sidebar').classList.remove('aktif');
-            document.getElementById('overlay-sb').classList.remove('aktif');
-        };
 
         function checkAndRender() {
             if (window.dataMaster.anggota.length > 0) {
@@ -579,7 +558,7 @@
             if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada pengeluaran</td></tr>'; return; }
             
             tbody.innerHTML = data.map(t => `<tr>
-                <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+                <td>${t.tanggal.split('-').reverse().join('/')}</td>
                 <td style="font-family:'Cinzel'">${t.kategori}</td>
                 <td>${t.deskripsi}</td>
                 <td class="text-right" style="color:#e8a0a0; font-weight:600">-${formatRp(t.jumlah)}</td>
@@ -614,14 +593,22 @@
             }
         };
 
-        window.showSection = function(id, el) {
+        window.showSection = function(id, el, pushState = true) {
             const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
             const restricted = ['section-iuran', 'section-pengeluaran', 'section-siklus', 'section-putaran'];
             if (user && user.level === 'anggota' && restricted.includes(id)) {
                 return; // Hanya izinkan overview untuk anggota
             }
 
-            window.tutupSidebar();
+            const subMap = {
+                'section-laporan-menu': 'Beranda Laporan',
+                'section-overview': 'Ringkasan Saldo',
+                'section-iuran': 'Realisasi Iuran',
+                'section-pengeluaran': 'Buku Pengeluaran',
+                'section-siklus': 'Siklus Arisan'
+            };
+            const subEl = document.getElementById('topbar-subtitle');
+            if (subEl) subEl.textContent = subMap[id] || '';
 
             document.querySelectorAll('.report-section').forEach(s => s.style.display = 'none');
             document.getElementById(id).style.display = 'block';
@@ -631,9 +618,16 @@
             if(parentBtn) parentBtn.classList.add('aktif');
 
             if (el) el.classList.add('aktif');
-            const btnId = el ? el.id : 'btn-' + id.replace('section-', '');
+            const btnId = el ? el.id : 'menu-' + id.replace('section-', '');
             const btn = document.getElementById(btnId);
             if(btn) btn.classList.add('aktif');
+
+            // Catat ke history
+            if (pushState) {
+                let hash = id.replace('section-', '');
+                if (id === 'section-laporan-menu') hash = 'menu';
+                history.pushState({ section: id }, "", "#" + hash);
+            }
         }
 
         window.copyReportToWA = function() {
@@ -718,6 +712,11 @@
 
         function formatRp(n) { return 'Rp ' + (parseInt(n)||0).toLocaleString('id-ID'); }
         initLaporan();
+
+        window.addEventListener('popstate', (e) => {
+            const sectionId = (e.state && e.state.section) ? e.state.section : 'section-laporan-menu';
+            window.showSection(sectionId, null, false);
+        });
     </script>
 </body>
 </html>

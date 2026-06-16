@@ -29,64 +29,44 @@
     </div>
 
     <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="input-username" placeholder="Contoh: admin" autocomplete="off"/>
+      <label>Nama</label>
+      <input type="text" id="input-username" placeholder="Contoh: budi" autocomplete="off"/>
     </div>
     <div class="form-group">
       <label>Kata Sandi</label>
-      <input type="password" id="input-pass" placeholder="Masukkan kata sandi" onkeydown="if(event.key==='Enter')window.handleLogin()"/>
+      <div class="password-wrapper">
+        <input type="password" id="input-pass" placeholder="Masukkan kata sandi" onkeydown="if(event.key==='Enter')window.handleLogin()"/>
+        <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('input-pass', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div class="pesan-error" id="pesan-error">Nama pengguna atau kata sandi salah.</div>
 
     <button class="tombol-utama" onclick="window.handleLogin()">Masuk ke Paguyuban</button>
-    <p class="login-hint" style="margin-top: 1.5rem; font-size: 0.85rem; color: rgba(240, 156, 77, 0.705); font-style: italic;">
-      * Untuk mendaftar, silahkan menghubungi Admin terlebih dahulu
+    <p class="login-hint" style="margin-top: 1rem; font-size: 0.8rem; color: rgba(238, 238, 238, 0.836); font-style: italic;">
+      * Masuk dengan user dan password yang telah diberikan admin
     </p>
   </div>
 </div>
 
 <!-- APP -->
 <div id="halaman-app" class="halaman">
-  <div class="overlay-sb" id="overlay-sb" onclick="window.tutupSidebar()"></div>
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <img src="logo PKEK.jpg" alt="Logo" class="sidebar-logo-img">
-      <p class="sidebar-logo">Paguyuban Keluarga</p>
-      <p class="sidebar-nama">Eyang<br>Kromoredjo</p>
-    </div>
-    <div class="sidebar-nav">
-      <p class="nav-label">Menu Utama</p>
-      <div class="nav-item aktif" onclick="window.bukaPanel('dashboard',this)"><span class="ni">🏠</span> Beranda</div>
-      <div id="nav-pengurus" style="display:none">
-        <div class="nav-item" onclick="window.bukaPanel('anggota',this)"><span class="ni">👥</span> Anggota</div>
-        
-        <div class="nav-item" id="nav-induk-arisan" onclick="location.href='modules/arisan.html'"><span class="ni">💰</span> Manajemen Arisan</div>
-
-        <div class="nav-item" id="nav-bukubesar" onclick="location.href='bukubesar.html'"><span class="ni">📖</span> Buku Besar</div>
-        <div class="nav-item" onclick="location.href='silsilah.html'"><span class="ni">🌳</span> Silsilah</div>
-
-        <div class="nav-item" id="nav-induk-laporan" onclick="location.href='modules/laporan.html'"><span class="ni">📊</span> Laporan Keuangan</div>
-
-        <div class="nav-item" id="nav-logs" style="display:none" onclick="window.bukaPanel('logs',this)"><span class="ni">📋</span> Log Aktivitas</div>
-      </div>
-    </div>
-    <div class="sidebar-footer">
-      <p class="sidebar-level" id="sidebar-level"></p>
-      <button id="btn-keluar-sidebar" class="tombol-keluar" onclick="window.keluar()" style="display:none">✦ Keluar</button>
-      <p style="font-size: 0.5rem; color: var(--cb); text-align: center; margin-top: 1rem; opacity: 0.6; font-family: 'Cinzel'; letter-spacing: 1px;">Sistem oleh Budi Purwanto bin Tukimin · 2025</p>
-    </div>
-  </nav>
 
   <main class="konten-utama">
     <div class="topbar">
       <div class="topbar-inner">
         <div style="display:flex; align-items:center;">
-          <button class="btn-back" onclick="window.bukaPanel('dashboard', document.querySelector('.nav-item'))" id="topbar-back-btn" style="display:none">❮</button>
-          <button class="hamburger" onclick="window.bukaSidebar()">☰</button>
+          <button class="btn-back" onclick="history.back()" id="topbar-back-btn" style="display:none">❮</button>
         </div>
         <p class="topbar-judul" id="topbar-judul">Beranda</p>
-        <p class="topbar-user" id="topbar-user"></p>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <p class="topbar-user" id="topbar-user" style="text-align:right; margin:0; line-height:1.2; font-size:0.75rem;"></p>
+          <button onclick="window.keluar()" title="Keluar" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:0.2s;">🚪</button>
+        </div>
       </div>
     </div>
 
@@ -103,7 +83,7 @@
           <p class="hero-tagline">Berdiri 1981 · Jakarta</p>
         </div>
         <div class="dana-balance-card">
-          <p class="balance-label">🗓️ Sejak 1981 — Tahun Ke-<span id="stat-tahun-berjalan">0</span></p>
+          <p class="balance-label">Data terinput hingga saat ini</span></p>
           <div class="balance-stats">
             <div class="balance-stat-item">
               <span class="balance-stat-num" id="stat-total">0</span>
@@ -132,7 +112,7 @@
             <h3 class="section-title">Layanan Utama</h3>
           </div>
           <div class="service-grid">
-            <div class="service-item" onclick="window.bukaPanel('anggota', document.querySelector('#nav-pengurus .nav-item'))">
+            <div class="service-item" onclick="window.bukaPanel('anggota')">
               <div class="service-icon" style="background:linear-gradient(135deg,#1565C0,#42A5F5)">👥</div>
               <span class="service-label">Anggota</span>
             </div>
@@ -144,7 +124,7 @@
               <div class="service-icon" style="background:linear-gradient(135deg,#1B5E20,#66BB6A)">📊</div>
               <span class="service-label">Laporan</span>
             </div>
-            <div class="service-item" onclick="location.href='bukubesar.html'">
+            <div class="service-item" id="shortcut-bukubesar" style="display:none" onclick="location.href='bukubesar.html'">
               <div class="service-icon" style="background:linear-gradient(135deg,#4A148C,#AB47BC)">📖</div>
               <span class="service-label">Buku Besar</span>
             </div>
@@ -152,7 +132,7 @@
               <div class="service-icon" style="background:linear-gradient(135deg,#006064,#26C6DA)">🌳</div>
               <span class="service-label">Silsilah</span>
             </div>
-            <div class="service-item" id="shortcut-logs" style="display:none" onclick="window.bukaPanel('logs', document.querySelector('#nav-logs'))">
+            <div class="service-item" id="shortcut-logs" style="display:none" onclick="window.bukaPanel('logs')">
               <div class="service-icon" style="background:linear-gradient(135deg,#37474F,#78909C)">📋</div>
               <span class="service-label">Log Aktivitas</span>
             </div>
@@ -164,40 +144,20 @@
           <div class="promo-banner-inner">
             <div class="promo-text">
               <h3>PAGUYUBAN KELUARGA EYANG KROMOREDJO</h3>
-              <p>Gotong Royong · Silaturahmi · Kebersamaan Lintas Generasi</p>
+              <p>Guyub ♦ Rukun ♦ Gotong Royong</p>
             </div>
             <div class="promo-badge">Sejak 1981</div>
           </div>
         </div>
 
-        <!-- Info Akses (Admin only) -->
-        <div id="dash-admin-access" style="display:none; margin-bottom:1rem">
-          <div class="dana-section">
-            <div class="section-header">
-              <h3 class="section-title">🔐 Pengelola Akses Sistem</h3>
-            </div>
-            <div class="table-wrapper" style="overflow-x:auto">
-              <table style="width:100%;border-collapse:collapse">
-                <thead>
-                  <tr>
-                    <th style="font-family:'Outfit',sans-serif;font-size:.65rem;color:var(--text-light);text-transform:uppercase;padding:.75rem;text-align:left;border-bottom:2px solid var(--border);font-weight:700;letter-spacing:.05em">Nama Pengguna</th>
-                    <th style="font-family:'Outfit',sans-serif;font-size:.65rem;color:var(--text-light);text-transform:uppercase;padding:.75rem;text-align:left;border-bottom:2px solid var(--border);font-weight:700;letter-spacing:.05em">Level</th>
-                    <th style="font-family:'Outfit',sans-serif;font-size:.65rem;color:var(--text-light);text-transform:uppercase;padding:.75rem;text-align:left;border-bottom:2px solid var(--border);font-weight:700;letter-spacing:.05em">Status Akun</th>
-                  </tr>
-                </thead>
-                <tbody id="access-table-body"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Anggota per Generasi -->
+                <!-- Anggota per Generasi -->
         <div class="dana-section">
           <div class="section-header">
             <h3 class="section-title">👨‍👩‍👧‍👦 Anggota per Generasi</h3>
           </div>
           <div class="stats-grid" id="stats-per-gen" style="margin-bottom:0"></div>
         </div>
+
 
         <!-- Tabungan Mandiri (anggota biasa) -->
         <div id="user-tabungan-box" style="display:none; margin-bottom:1rem">
@@ -218,21 +178,42 @@
               <div class="stat-card" style="border-left:4px solid var(--accent-green)">
                 <p class="stat-lbl">🏮 Saldo Dana Sosial</p>
                 <p class="stat-num" id="dash-sosial" style="color:var(--accent-green);font-size:1.2rem">Rp 0</p>
-                <p class="stat-sub">Setelah dipotong bantuan sosial</p>
+                <p class="stat-sub">Dana sosial & operasional</p>
               </div>
               <div class="stat-card" style="border-left:4px solid var(--primary)">
                 <p class="stat-lbl">🎓 Saldo Dana Tabungan</p>
                 <p class="stat-num" id="dash-tabungan" style="font-size:1.2rem">Rp 0</p>
                 <p class="stat-sub">Akumulasi tabungan mandiri</p>
               </div>
+              <div class="stat-card" style="border-left:4px solid var(--accent-orange)">
+                <p class="stat-lbl">💰 Total Saldo Kas</p>
+                <p class="stat-num" id="dash-total-kas" style="color:var(--accent-orange);font-size:1.2rem">Rp 0</p>
+                <p class="stat-sub">Sesuai saldo akhir buku besar</p>
+              </div>
             </div>
           </div>
-        </div>
+        </div>        
 
-        <!-- Tentang Paguyuban -->
-        <div class="dash-info">
-          <h3>ℹ️ Tentang Paguyuban</h3>
-          <p>Bermula dari tanah Solo yang kaya budaya, para pendahulu keluarga Kromoredjo merantau ke Jakarta membawa nilai-nilai luhur: kebersamaan, gotong royong, dan silaturahmi yang tak putus. Selama 45 tahun dan lima generasi, paguyuban ini terus tumbuh — bukan sekadar ikatan darah, melainkan ikatan hati.</p>
+
+        <!-- Info Akses (Admin only) -->
+        <div id="dash-admin-access" style="display:none; margin-bottom:1rem">
+          <div class="dana-section">
+            <div class="section-header">
+              <h3 class="section-title">🔐 Pengelola Akses Sistem</h3>
+            </div>
+            <div class="table-wrapper" style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse">
+                <thead>
+                  <tr>
+                    <th style="font-family:'Outfit',sans-serif;font-size:.65rem;color:var(--text-light);text-transform:uppercase;padding:.75rem;text-align:left;border-bottom:2px solid var(--border);font-weight:700;letter-spacing:.05em">Nama Pengguna</th>
+                    <th style="font-family:'Outfit',sans-serif;font-size:.65rem;color:var(--text-light);text-transform:uppercase;padding:.75rem;text-align:left;border-bottom:2px solid var(--border);font-weight:700;letter-spacing:.05em">Level</th>
+                    <th style="font-family:'Outfit',sans-serif;font-size:.65rem;color:var(--text-light);text-transform:uppercase;padding:.75rem;text-align:left;border-bottom:2px solid var(--border);font-weight:700;letter-spacing:.05em">Status Akun</th>
+                  </tr>
+                </thead>
+                <tbody id="access-table-body"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
       </div><!-- /dana-content -->
@@ -412,7 +393,14 @@
     </div>
     <div class="modal-body">
       <p class="konfirm-teks" style="margin-bottom:1rem">PERINGATAN: Ini akan menghapus SELURUH riwayat log aktivitas secara permanen.<br>Masukkan kata sandi otorisasi:</p>
-      <input type="password" id="input-password-otorisasi" class="search-box" style="width:100%; background:rgba(0,0,0,0.2); border-color:var(--em); color:white; padding:0.8rem" placeholder="Kata sandi..." onkeydown="if(event.key==='Enter') window.konfirmasiBersihkanLog()">
+      <div class="password-wrapper">
+        <input type="password" id="input-password-otorisasi" class="search-box" style="width:100%; background:rgba(0,0,0,0.2); border-color:var(--em); color:white; padding:0.8rem" placeholder="Kata sandi..." onkeydown="if(event.key==='Enter') window.konfirmasiBersihkanLog()">
+        <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('input-password-otorisasi', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-batal" onclick="window.tutupModal('modal-otorisasi')">Batal</button>
@@ -595,23 +583,5 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module" src="js/app.js"></script>
 
-<!-- Sync service grid visibility with nav-pengurus (DANA style shortcuts) -->
-<script>
-  (function() {
-    function syncServiceGrid() {
-      var np  = document.getElementById('nav-pengurus');
-      var sg  = document.getElementById('dash-service-grid');
-      var nl  = document.getElementById('nav-logs');
-      var sl  = document.getElementById('shortcut-logs');
-      if (np && sg) sg.style.display = (np.style.display === 'none' || np.style.display === '') ? 'none' : 'block';
-      if (nl && sl) sl.style.display = (nl.style.display === 'none' || nl.style.display === '') ? 'none' : 'flex';
-    }
-    var obs = new MutationObserver(syncServiceGrid);
-    document.addEventListener('DOMContentLoaded', function() {
-      var el = document.getElementById('nav-pengurus');
-      if (el) obs.observe(el, { attributes: true, attributeFilter: ['style'] });
-    });
-  })();
-</script>
 </body>
 </html>
