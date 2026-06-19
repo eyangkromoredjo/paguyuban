@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -179,6 +179,10 @@
                     <div class="service-item" id="menu-penerima" onclick="window.showPanel('panel-jadwal')">
                         <div class="service-icon" style="background:linear-gradient(135deg,#00BCD4,#4DD0E1)">📅</div>
                         <span class="service-label">Penerima</span>
+                    </div>
+                    <div class="service-item" id="menu-siklus" onclick="window.showPanel('panel-siklus')">
+                        <div class="service-icon" style="background:linear-gradient(135deg,#E65100,#FFA726)">🔄</div>
+                        <span class="service-label">Siklus Arisan</span>
                     </div>
                 </div>
             </div>
@@ -400,6 +404,32 @@
                     </table>
                 </div>
             </div>
+
+            <!-- PANEL SIKLUS -->
+            <div class="panel" id="panel-siklus">
+                <h3>Status <em>Siklus Pemenang</em></h3>
+                <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:1rem;">
+                    <div class="stat-card">
+                        <span class="stat-lbl">Sudah Dapat Arisan</span>
+                        <div class="stat-num" id="val-cycle-done">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-lbl">Belum Dapat Arisan</span>
+                        <div class="stat-num" id="val-cycle-todo">0</div>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Anggota Belum Dapat (Queue)</th>
+                                <th>Kategori</th>
+                            </tr>
+                        </thead>
+                        <tbody id="body-report-siklus"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </main>
 </div>
@@ -442,8 +472,8 @@ window.initArisanPage = async function() {
     });
 
     if (user.level === 'anggota') {
-        const targets = ['panel-cek-pembayaran', 'panel-pengeluaran', 'panel-jadwal'];
-        const menuMap = { 'panel-cek-pembayaran': 'menu-iuran', 'panel-pengeluaran': 'menu-pengeluaran', 'panel-jadwal': 'menu-penerima' };
+        const targets = ['panel-cek-pembayaran', 'panel-pengeluaran', 'panel-jadwal', 'panel-siklus'];
+        const menuMap = { 'panel-cek-pembayaran': 'menu-iuran', 'panel-pengeluaran': 'menu-pengeluaran', 'panel-jadwal': 'menu-penerima', 'panel-siklus': 'menu-siklus' };
         targets.forEach(t => {
             const btn = document.querySelector(`.nav-item[data-target="${t}"]`);
             if (btn) btn.style.display = 'none';
@@ -479,6 +509,7 @@ window.initArisanPage = async function() {
         renderPenerimaDropdown();
         renderPesertaTable();
         renderPayChecklist();
+        renderSiklusReport();
     });
 
     // 3. Sinkronisasi Riwayat Arisan Global dari Cloud
@@ -495,6 +526,7 @@ window.initArisanPage = async function() {
             renderExpenseTable();
             renderPayChecklist();
             renderPenerimaDropdown();
+            renderSiklusReport();
         }
     });
 
@@ -522,7 +554,8 @@ window.initArisanPage = async function() {
     const panelMap = { 
         'aturan': 'panel-aturan', 'peserta': 'panel-daftar-peserta', 
         'iuran': 'panel-cek-pembayaran', 'pengeluaran': 'panel-pengeluaran', 
-        'tipe': 'panel-atur-anggota', 'penerima': 'panel-jadwal',
+        'tipe': 'panel-atur-anggota', 'penerima': 'panel-jadwal', 
+        'siklus': 'panel-siklus',
         'menu': 'panel-arisan-menu'
     };
 
@@ -557,7 +590,7 @@ window.toggleArisanSubmenu = function() {
 
 window.showPanel = function(panelId, el, pushState = true) {
     const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
-    const restricted = ['panel-cek-pembayaran', 'panel-pengeluaran', 'panel-jadwal'];
+    const restricted = ['panel-cek-pembayaran', 'panel-pengeluaran', 'panel-jadwal', 'panel-siklus'];
     if (user && user.level === 'anggota' && restricted.includes(panelId)) {
         return; // Hentikan akses jika user level anggota mencoba membuka panel terlarang
     }
@@ -568,7 +601,8 @@ window.showPanel = function(panelId, el, pushState = true) {
         'panel-daftar-peserta': 'Daftar Peserta Aktif',
         'panel-cek-pembayaran': 'Iuran & Presensi',
         'panel-pengeluaran': 'Catat Pengeluaran',
-        'panel-jadwal': 'Data Penerima'
+        'panel-jadwal': 'Data Penerima',
+        'panel-siklus': 'Siklus Arisan'
     };
     const subEl = document.getElementById('topbar-subtitle');
     if (subEl) subEl.textContent = subMap[panelId] || '';
@@ -599,6 +633,7 @@ window.showPanel = function(panelId, el, pushState = true) {
     if (panelId === 'panel-cek-pembayaran') window.renderPayChecklist();
     if (panelId === 'panel-pengeluaran') window.renderExpenseTable();
     if (panelId === 'panel-jadwal') window.renderJadwalTable();
+    if (panelId === 'panel-siklus') renderSiklusReport();
     // window.renderPesertaDropdown() sekarang dipanggil saat bukaFormAturPeserta
 
     // Tampilkan tombol edit hanya jika Admin/Pengurus membuka panel aturan
@@ -820,6 +855,18 @@ async function saveAnggotaSettings() {
     showToast("Data anggota arisan berhasil diperbarui.", "success", 1200);
 }
 window.saveAnggotaSettings = saveAnggotaSettings;
+
+function renderSiklusReport() {
+    const listJadwal = window.storageArisan.jadwal || [];
+    const winners = listJadwal.map(j => String(j.penerimaId));
+    const todo = window.semuaAnggota.filter(m => m.tipeArisan === 'pokok' && !winners.includes(String(m.id)));
+    
+    if (document.getElementById('val-cycle-done')) document.getElementById('val-cycle-done').textContent = winners.length;
+    if (document.getElementById('val-cycle-todo')) document.getElementById('val-cycle-todo').textContent = todo.length;
+    
+    const tbody = document.getElementById('body-report-siklus');
+    if (tbody) tbody.innerHTML = todo.map(m => `<tr><td>${m.nama}</td><td style="font-family:'Outfit'; font-size:0.7rem"><span class="status-pill status-pokok">Pokok</span></td></tr>`).join('');
+}
 
 function renderPesertaTable() {
     const tbody = document.getElementById("tabel-peserta");
@@ -1382,13 +1429,27 @@ async function savePayments() {
     window.storageArisan.iuran_bulanan = window.storageArisan.iuran_bulanan || [];
 
     const rows = Array.from(document.querySelectorAll('#pay-tbody tr'));
+    let totalPokok = 0, totalSosial = 0, totalTabungan = 0;
+
     const pembayaran = rows.map(row => {
         const payChk = row.querySelector('.pay-chk');
         const hadirChk = row.querySelector('.hadir-chk');
         const metodeSel = row.querySelector('.metode-bayar');
-        
+        const mId = payChk.getAttribute('data-member');
+
+        if (payChk.checked) {
+            const m = window.semuaAnggota.find(mem => String(mem.id) === String(mId));
+            if (m) {
+                const nom = m.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+                const kom = m.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
+                if (kom.arisan) totalPokok += (parseInt(nom.arisan) || 0);
+                if (kom.sosial) totalSosial += (parseInt(nom.sosial) || 0);
+                if (kom.tabungan) totalTabungan += (parseInt(nom.tabungan) || 0);
+            }
+        }
+
         return {
-            memberId: payChk.getAttribute('data-member'),
+            memberId: mId,
             paid: payChk.checked,
             hadir: hadirChk.checked,
             metodeBayar: metodeSel.value,
@@ -1401,7 +1462,39 @@ async function savePayments() {
     if (idx === -1) window.storageArisan.iuran_bulanan.unshift(entri); else window.storageArisan.iuran_bulanan[idx] = entri;
 
     await set(ref(db, "arisan_global"), window.storageArisan);
-    
+
+    // SINKRONISASI KE BUKU BESAR (TRANSAKSI)
+    const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
+    const syncTrx = async (label, total, kategori) => {
+        const desc = `[IURAN] ${label} Periode ${periode}`;
+        const trxSnap = await get(ref(db, "transaksi"));
+        const allTrx = trxSnap.exists() ? trxSnap.val() : {};
+        const existingKey = Object.keys(allTrx).find(k => allTrx[k].deskripsi === desc);
+
+        const trxData = {
+            tanggal: `${periode}-01`,
+            deskripsi: desc,
+            jumlah: total,
+            kategori: kategori,
+            tipe: 'masuk',
+            inputOleh: user ? user.nama : 'Admin',
+            updatedAt: Date.now()
+        };
+
+        if (existingKey) {
+            // Update jika sudah ada (misal ada perubahan status lunas)
+            await update(ref(db, `transaksi/${existingKey}`), trxData);
+        } else if (total > 0) {
+            // Buat baru jika belum ada dan total > 0
+            trxData.createdAt = Date.now();
+            await set(push(ref(db, "transaksi")), trxData);
+        }
+    };
+
+    await syncTrx("Dana Sosial", totalSosial, "Sosial");
+    await syncTrx("Tabungan", totalTabungan, "Tabungan");
+    await syncTrx("Arisan Pokok", totalPokok, "kas");
+
     window.renderPesertaTable();
     window.renderPayChecklist();
     window.renderIuranHistory();

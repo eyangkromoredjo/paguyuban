@@ -12,6 +12,74 @@
     #arisan-submenu .nav-item, #laporan-submenu .nav-item { border-left: none; opacity: 0.7; padding: 0.55rem 1rem 0.55rem 3rem; font-size: 0.8rem; min-height: auto; border-bottom: 1px solid rgba(255,255,255,0.04); }
     #arisan-submenu .nav-item:hover, #laporan-submenu .nav-item:hover { opacity: 1; background: rgba(255,255,255,0.08); }
     #arisan-submenu .nav-item.aktif, #laporan-submenu .nav-item.aktif { opacity: 1; color: #fff; font-weight: 700; background: rgba(255,255,255,0.12); }
+
+    /* SUB-TAB STYLES */
+    .tabs-nav { display: flex; gap: 10px; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(201,168,76,0.1); padding-bottom: 5px; overflow-x: auto; scrollbar-width: none; }
+    .tabs-nav::-webkit-scrollbar { display: none; }
+    .tab-btn { background: none; border: none; color: var(--cb); font-family: 'Cinzel'; font-size: 0.75rem; font-weight: 700; padding: 10px 15px; cursor: pointer; white-space: nowrap; transition: 0.3s; border-radius: 8px 8px 0 0; position: relative; }
+    .tab-btn.aktif { color: var(--em); }
+    .tab-btn.aktif::after { content: ""; position: absolute; bottom: -6px; left: 0; width: 100%; height: 3px; background: var(--em); border-radius: 10px; }
+
+    /* BAGAN STYLES */
+    .bagan-card { background: var(--cs); border: 1px solid var(--em); padding: 1rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .bagan-jabatan { font-family: 'Cinzel'; font-size: 0.6rem; color: var(--em); letter-spacing: 2px; margin-bottom: 5px; text-transform: uppercase; font-weight: 800; }
+    .bagan-nama { font-family: 'Outfit'; font-size: 0.9rem; color: #fff; font-weight: 600; }
+
+    /* Styling for Org Chart Groups */
+    .org-chart-group {
+      margin-bottom: 2.5rem;
+    }
+    .org-chart-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.2em;
+      color: var(--em);
+      text-transform: uppercase;
+      margin-bottom: -15px; /* Pull the chart closer */
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .org-chart-title::before, .org-chart-title::after {
+      content: ''; display: inline-block; width: 50px; height: 1px;
+      background: linear-gradient(to right, transparent, var(--em));
+      vertical-align: middle; margin: 0 1rem;
+    }
+    .org-chart-title::before { background: linear-gradient(to left, transparent, var(--em)); }
+
+    /* FUTURISTIC ORG CHART STYLES */
+    .org-chart { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 2rem; overflow-x: auto; }
+    .org-level { display: flex; justify-content: center; position: relative; }
+    .org-level-penasihat, .org-level-seksi { gap: 30px; flex-wrap: wrap; }
+    .org-level-inti { flex-direction: column; gap: 30px; }
+    .bagan-card { position: relative; flex-shrink: 0; text-decoration: none; color: var(--kr); background: rgba(201,168,76,0.05); backdrop-filter: blur(5px); border: 1px solid var(--em); padding: 0.8rem; display: inline-block; border-radius: 12px; min-width: 120px; max-width: 140px; transition: all 0.3s; filter: drop-shadow(0px 0px 8px rgba(201,168,76,0.3)); }
+    .bagan-card:hover { filter: drop-shadow(0px 0px 15px rgba(201,168,76,0.5)); transform: translateY(-3px); }
+    .bagan-avatar { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto 8px; background: var(--cs); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel'; font-size: 1rem; color: var(--em); border: 2px solid var(--em); overflow: hidden; }
+    .bagan-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .org-chart .bagan-nama { font-size: 0.8rem; margin-bottom: 4px; font-weight: 700; color: #fff; }
+    .bagan-jabatan { font-size: 0.55rem; letter-spacing: 1px; margin-bottom: 0; color: var(--em); font-family: 'Cinzel'; text-transform: uppercase; font-weight: 800; }
+
+    /* --- HIERARCHY CONNECTOR LINES --- */
+
+    /* 1. Main trunk line connecting levels */
+    .org-level-penasihat:not(:empty)::after,
+    .org-level-inti:not(:empty)::before,
+    .org-level-inti:not(:empty)::after,
+    .org-level-seksi:not(:empty)::before { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 2px; background: var(--em); }
+    
+    .org-level-penasihat:not(:empty)::after { bottom: -20px; height: 20px; } /* Line down from Penasihat */
+    .org-level-inti:not(:empty)::before { top: -20px; height: 20px; }      /* Line up to Inti */
+    .org-level-inti:not(:empty)::after { bottom: -20px; height: 20px; }     /* Line down from Inti */
+    .org-level-seksi:not(:empty)::before { top: -20px; height: 20px; }      /* Line up to Seksi */
+
+    /* 2. Internal connectors for 'inti' level (vertical stack) */
+    .org-level-inti > .bagan-card:not(:last-child)::after { content: ''; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); width: 2px; height: 15px; background: var(--em); }
+    .org-level-inti > .bagan-card:not(:first-child)::before { top: -15px; height: 15px; }
+
+    /* 3. Bus line and droplines for 'seksi' level */
+    .org-level-seksi:not(:empty)::after { content: ''; position: absolute; top: -20px; height: 2px; background: var(--em); left: calc(120px / 2); right: calc(120px / 2); }
+    .org-level-seksi > .bagan-card::before { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 2px; background: var(--em); top: -20px; height: 20px; }
+
   </style>
 </head>
 <body>
@@ -124,10 +192,6 @@
               <div class="service-icon" style="background:linear-gradient(135deg,#1B5E20,#66BB6A)">📊</div>
               <span class="service-label">Laporan</span>
             </div>
-            <div class="service-item" id="shortcut-bukubesar" style="display:none" onclick="location.href='bukubesar.html'">
-              <div class="service-icon" style="background:linear-gradient(135deg,#4A148C,#AB47BC)">📖</div>
-              <span class="service-label">Buku Besar</span>
-            </div>
             <div class="service-item" onclick="location.href='silsilah.html'">
               <div class="service-icon" style="background:linear-gradient(135deg,#006064,#26C6DA)">🌳</div>
               <span class="service-label">Silsilah</span>
@@ -222,23 +286,57 @@
     <!-- ANGGOTA -->
     <div class="panel" id="panel-anggota">
       <div class="panel-header">
-        <h2 class="panel-judul">Daftar <em>Anggota</em></h2>
-        <button class="btn-tambah" id="btn-tambah-anggota" onclick="window.bukaFormTambah()">+ Tambah Anggota</button>
+        <h2 class="panel-judul" id="anggota-panel-title">Manajemen <em>Keluarga</em></h2>
       </div>
-      <div class="filter-bar">
-        <input type="text" class="search-box" id="search-anggota" placeholder="🔍 Cari nama..." oninput="window.renderAnggota()"/>
-        <button class="fbtn aktif" onclick="window.filterGen('semua',this)">Semua</button>
-        <button class="fbtn" onclick="window.filterGen('0',this)">Gen 0</button>
-        <button class="fbtn" onclick="window.filterGen('1',this)">Gen 1</button>
-        <button class="fbtn" onclick="window.filterGen('2',this)">Gen 2</button>
-        <button class="fbtn" onclick="window.filterGen('3',this)">Gen 3</button>
-        <button class="fbtn" onclick="window.filterGen('4',this)">Gen 4</button>
-        <button class="fbtn" onclick="window.filterGen('5',this)">Gen 5</button>
-        <button class="fbtn" onclick="window.filterGen('6',this)">Gen 6</button>
-        <button class="fbtn" onclick="window.filterGen('7',this)">Gen 7</button>
-        <button class="fbtn" onclick="window.filterGen('wafat',this)">🪦 Wafat</button>
+
+      <!-- MENU UTAMA ANGGOTA (ICON GRID) -->
+      <div id="section-anggota-menu">
+        <div class="service-grid">
+          <div class="service-item" onclick="window.switchSubPanelAnggota('daftar')">
+            <div class="service-icon" style="background:linear-gradient(135deg,#1565C0,#42A5F5)">👥</div>
+            <span class="service-label">Daftar Anggota</span>
+          </div>
+          <div class="service-item" onclick="window.switchSubPanelAnggota('pengurus')">
+            <div class="service-icon" style="background:linear-gradient(135deg,#FF9800,#FFB74D)">🛡️</div>
+            <span class="service-label">Jabatan Pengurus</span>
+          </div>
+          <div class="service-item" onclick="window.switchSubPanelAnggota('bagan')">
+            <div class="service-icon" style="background:linear-gradient(135deg,#4CAF50,#81C784)">🌲</div>
+            <span class="service-label">Bagan Struktur</span>
+          </div>
+        </div>
       </div>
-      <div id="daftar-anggota"></div>
+
+      <!-- SUB-PANEL: DAFTAR -->
+      <div id="sub-panel-daftar" style="display:none">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem">
+          <button class="btn-tambah" id="btn-tambah-anggota" onclick="window.bukaFormTambah()">+ Tambah Anggota</button>
+        </div>
+        <div class="filter-bar" id="anggota-filters">
+          <input type="text" class="search-box" id="search-anggota" placeholder="🔍 Cari nama..." oninput="window.renderAnggota()"/>
+          <button class="fbtn aktif" onclick="window.filterGen('semua',this)">Semua</button>
+          <button class="fbtn" onclick="window.filterGen('0',this)">Gen 0</button>
+          <button class="fbtn" onclick="window.filterGen('1',this)">Gen 1</button>
+          <button class="fbtn" onclick="window.filterGen('2',this)">Gen 2</button>
+          <button class="fbtn" onclick="window.filterGen('3',this)">Gen 3</button>
+          <button class="fbtn" onclick="window.filterGen('4',this)">Gen 4</button>
+          <button class="fbtn" onclick="window.filterGen('5',this)">Gen 5</button>
+          <button class="fbtn" onclick="window.filterGen('6',this)">Gen 6</button>
+          <button class="fbtn" onclick="window.filterGen('7',this)">Gen 7</button>
+          <button class="fbtn" onclick="window.filterGen('wafat',this)">🪦 Wafat</button>
+        </div>
+        <div id="daftar-anggota"></div>
+      </div>
+
+      <!-- SUB-PANEL: PENGURUS -->
+      <div id="sub-panel-pengurus" style="display:none">
+        <div id="daftar-pengurus"></div>
+      </div>
+
+      <!-- SUB-PANEL: BAGAN -->
+      <div id="sub-panel-bagan" style="display:none">
+        <div id="bagan-organisasi-visual"></div>
+      </div>
     </div>
 
     <!-- ARISAN -->

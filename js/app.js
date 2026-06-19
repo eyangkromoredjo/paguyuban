@@ -53,8 +53,13 @@ window.handleLogin = async function() {
 
   // Cek Anggota di Firebase
   const data = await window.ambilData();
-  const user = data.find(m => 
-    m.panggilan && m.panggilan.toLowerCase() === uInput && m.password === pInput
+  const user = data.find(m =>
+    m.bolehDaftar &&
+    m.password === pInput &&
+    (
+      (m.nama && m.nama.toLowerCase() === uInput) ||
+      (m.panggilan && m.panggilan.toLowerCase() === uInput)
+    )
   );
 
   if (user) {
@@ -84,10 +89,6 @@ function proceedLogin(akun) {
   // Tampilkan Grid Layanan di Dashboard jika bukan Guest
   const serviceGrid = document.getElementById('dash-service-grid');
   if (serviceGrid) serviceGrid.style.display = (akun.level !== 'guest') ? 'block' : 'none';
-
-  // Kontrol visibilitas Buku Besar (Admin/Pengurus saja)
-  const shortcutBukuBesar = document.getElementById('shortcut-bukubesar');
-  if(shortcutBukuBesar) shortcutBukuBesar.style.display = (akun.level === 'admin' || akun.level === 'pengurus') ? 'flex' : 'none';
 
   const canAdd = HAK_AKSES[akun.level]?.tambah;
   if(document.getElementById('btn-tambah-anggota')) 
@@ -119,6 +120,13 @@ function proceedLogin(akun) {
 
   const btnClearLogs = document.getElementById('btn-bersihkan-log');
   if(btnClearLogs) btnClearLogs.style.display = akun.level === 'admin' ? 'inline-block' : 'none';
+
+  const dashPengurus = document.getElementById('dash-pengurus-section');
+  if(dashPengurus) {
+    const displayStyle = (akun.level !== 'guest') ? 'block' : 'none';
+    dashPengurus.style.display = displayStyle;
+    console.log(`[DEBUG] dash-pengurus-section display set to: ${displayStyle} for user level: ${akun.level}`);
+  }
 
   applyMask('input-nominal');
   applyMask('trx-jumlah');
@@ -182,12 +190,35 @@ function renderAccessCards(dataAnggota) {
     .forEach(a => {
     html += `
       <tr>
-        <td style="padding: 0.7rem 0.8rem; border-bottom: 1px solid rgba(201,168,76,0.1); font-size: 0.75rem; vertical-align: middle;"><strong>${a.panggilan || a.nama}</strong></td>
+        <td style="padding: 0.7rem 0.8rem; border-bottom: 1px solid rgba(201,168,76,0.1); font-size: 0.75rem; vertical-align: middle;"><strong>${a.panggilan || a.nama}</strong>${a.jabatan ? `<br><small style="color:var(--em); font-weight:600;">${a.jabatan}</small>` : ''}</td>
         <td style="padding: 0.7rem 0.8rem; border-bottom: 1px solid rgba(201,168,76,0.1); vertical-align: middle;"><span class="badge" style="background:rgba(201,168,76,0.1); color:var(--em); font-size:0.55rem; padding: 2px 6px; border:1px solid rgba(201,168,76,0.3); border-radius:4px; font-family:'Cinzel'; font-weight:bold;">${(a.level || 'anggota').toUpperCase()}</span></td>
         <td style="padding: 0.7rem 0.8rem; border-bottom: 1px solid rgba(201,168,76,0.1); font-size: 0.65rem; opacity: 0.7; font-style: italic; vertical-align: middle;">Anggota Trah</td>
       </tr>`;
   });
   body.innerHTML = html;
+}
+
+function renderPengurusDashboard(dataAnggota) {
+  const body = document.getElementById('dash-pengurus-body');
+  if (!body) return;
+  console.log("[DEBUG] renderPengurusDashboard called. Total anggota:", dataAnggota.length);
+
+  // Ambil hanya anggota yang levelnya admin atau pengurus
+  const officers = dataAnggota
+    .filter(a => a.level === 'admin' || a.level === 'pengurus')
+    .sort((a, b) => (a.jabatan || 'zzz').localeCompare(b.jabatan || 'zzz'));
+
+  body.innerHTML = officers.map(o => `
+    <tr>
+      <td style="padding: 0.8rem; border-bottom: 1px solid var(--border); font-size: 0.8rem;"><strong>${o.nama}</strong><br><small style="color:var(--text-light); font-size:0.6rem;">${o.level.toUpperCase()}</small></td>
+      <td style="padding: 0.8rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; color: var(--primary); font-weight: 700;">${o.jabatan || (o.level === 'admin' ? 'Penasehat' : 'Anggota Pengurus')}</td>
+    </tr>
+  `).join('');
+  console.log("[DEBUG] Officers found for dashboard:", officers.length, officers);
+
+  if (officers.length === 0) {
+    body.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:1rem; opacity:0.7;">Belum ada pengurus yang ditetapkan.</td></tr>`;
+  }
 }
 
 window.keluar = function() {
@@ -374,6 +405,7 @@ window.toggleIzinDaftar = async function(id, val) {
   }
 
   await simpanSatu(a);
+  await window.renderAnggota(); // <-- TAMBAHKAN BARIS INI
 };
 
 window.updateLevelAnggota = async function(id, newLevel) {
@@ -388,11 +420,161 @@ window.updateLevelAnggota = async function(id, newLevel) {
   toast(`Level ${a.nama} diperbarui menjadi ${newLevel.toUpperCase()}.`);
 };
 
+window.updateJabatanAnggota = async function(id, newJabatan) {
+  if (!HAK_AKSES[penggunaLogin.level]?.kelolaAkun) return;
+  const data = await window.ambilData();
+  const a = data.find(x => String(x.id) === String(id));
+  if(!a) return;
+  a.jabatan = newJabatan.trim();
+  await simpanSatu(a);
+  toast(`Jabatan untuk ${a.nama} telah disimpan.`);
+};
+
+// Daftar Jabatan Terstruktur
+const JABATAN_LIST = [
+  { group: "Struktur Inti", roles: ["Penasihat", "Ketua Paguyuban", "Wakil Ketua", "Sekretaris", "Bendahara"] },
+  { group: "Seksi / Divisi", roles: ["Seksi Humas", "Seksi Acara", "Seksi Konsumsi", "Seksi Dana & Sosial", "Seksi Dokumentasi"] },
+  { group: "Koordinator", roles: ["Koordinator Wilayah", "Perwakilan Generasi"] }
+];
+
+// Fungsi untuk membuat HTML dropdown jabatan
+function generateJabatanOptions(selectedValue = "") {
+  let optionsHtml = `<option value="">-- Pilih Jabatan --</option>`;
+  JABATAN_LIST.forEach(cat => {
+    optionsHtml += `<optgroup label="${cat.group}">`;
+    cat.roles.forEach(role => {
+      optionsHtml += `<option value="${role}" ${selectedValue === role ? 'selected' : ''}>${role}</option>`;
+    });
+    optionsHtml += `</optgroup>`;
+  });
+  return optionsHtml;
+}
+
+window.tambahJabatanPengurus = async function() {
+  if (!HAK_AKSES[penggunaLogin.level]?.kelolaAkun) return toast("Hanya Admin yang bisa menambah jabatan.");
+  const id = document.getElementById('select-calon-pengurus').value;
+  const jabatan = document.getElementById('select-jabatan-baru').value;
+
+  if (!id || !jabatan) return toast("Harap pilih anggota dan isi nama jabatan.");
+
+  const d = await window.ambilData();
+  const a = d.find(x => String(x.id) === String(id));
+  if(!a) return;
+
+  a.level = 'pengurus';
+  a.jabatan = jabatan;
+  await simpanSatu(a);
+  toast(`${a.nama} telah ditambahkan sebagai ${jabatan}.`);
+  await window.renderAnggota(); // Render ulang untuk menampilkan perubahan
+};
+
+window.hapusJabatanPengurus = async function(id) {
+  if (!HAK_AKSES[penggunaLogin.level]?.kelolaAkun) return toast("Hanya Admin yang bisa mencopot jabatan.");
+  if (!confirm('Anda yakin ingin mencopot jabatan dari anggota ini? Mereka akan kembali menjadi anggota biasa.')) return;
+
+  const d = await window.ambilData();
+  const a = d.find(x => String(x.id) === String(id));
+  if(!a) return;
+
+  a.level = 'anggota';
+  a.jabatan = ''; // Hapus jabatan
+  await simpanSatu(a);
+  toast(`${a.nama} telah dicopot dari jabatannya.`);
+  await window.renderAnggota(); // Render ulang untuk menampilkan perubahan
+}
+
 // 5. UI & RENDER
 window.renderAnggota = async function() {
   const data = await window.ambilData();
+
+  // LOGIKA KHUSUS HALAMAN PENGURUS (MANAJEMEN JABATAN)
+  if (filterAktif === 'pengurus') {
+    const container = document.getElementById('daftar-pengurus');
+    if (!container) return;
+
+    const adminsAndPengurus = data.filter(a => a.level === 'admin' || a.level === 'pengurus');
+    const isAdmin = penggunaLogin.level === 'admin';
+
+    let html = `<style>
+      .pengurus-grid { display: grid; grid-template-columns: 1fr 1.5fr ${isAdmin ? 'auto' : ''}; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(201,168,76,0.1); }
+      .pengurus-grid-header { font-size:0.6rem; color:var(--cb); text-transform:uppercase; letter-spacing:1px; padding: 0 0.5rem; }
+      .pengurus-grid-item { padding: 0 0.5rem; }
+      @media (max-width: 768px) {
+        .pengurus-grid { grid-template-columns: 1fr; gap: 0.8rem; padding: 1.5rem 0; }
+        .pengurus-grid-header { display: none; }
+        .pengurus-grid-item.aksi { text-align: left !important; }
+        .tambah-jabatan-grid { grid-template-columns: 1fr !important; }
+      }
+    </style>
+    <div class="panel" style="background:rgba(201,168,76,0.05); border:1px solid var(--em); padding:1.5rem; border-radius:12px;">
+      <h3 style="font-family:'Cinzel'; color:var(--em); margin-bottom:0.5rem; font-size:1rem;">Daftar Jabatan Pengurus</h3>
+      <p style="font-size:0.75rem; color:var(--cb); margin-bottom:1.5rem; line-height:1.4;">${isAdmin ? 'Admin: Silakan isi kolom jabatan sesuai hasil kesepakatan rapat.' : 'Berikut adalah nama-nama yang mendapatkan amanah kepengurusan.'}</p>
+      <div>
+        <div class="pengurus-grid pengurus-grid-header">
+          <div>Nama Pengurus</div>
+          <div>Jabatan Organisasi</div>
+          ${isAdmin ? '<div style="text-align:right;">Aksi</div>' : ''}
+        </div>
+      `;
+    
+    adminsAndPengurus.forEach(a => {
+      html += `<div class="pengurus-grid">
+        <div class="pengurus-grid-item">
+          <strong style="color:var(--kr); font-size:0.9rem;">${a.nama}</strong><br>
+          <span class="badge" style="background:var(--cs); color:var(--em); font-size:0.5rem; padding:2px 4px; border-radius:3px;">${a.level.toUpperCase()}</span>
+        </div>
+        <div class="pengurus-grid-item">
+        ${isAdmin ? 
+          `<div style="display:flex; gap:8px; align-items:center;">
+             <select id="jabatan-select-${a.id}" style="flex:1; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--em); color:white; border-radius:6px; font-size:0.85rem;">
+               ${generateJabatanOptions(a.jabatan)}
+             </select>
+             <button class="btn-sm solid" onclick="window.updateJabatanAnggota('${a.id}', document.getElementById('jabatan-select-${a.id}').value)">Simpan</button>
+           </div>` : 
+          `<strong style="color:var(--em); font-family:'Cinzel'; letter-spacing:1px;">${a.jabatan || 'Anggota Pengurus'}</strong>`
+        }
+        </div>
+        ${isAdmin ? `<div class="pengurus-grid-item aksi" style="text-align:right;">
+          ${a.level === 'pengurus' ? `<button class="btn-sm danger" onclick="window.hapusJabatanPengurus('${a.id}')">Copot Jabatan</button>` : ''}
+        </div>` : ''}
+      </div>`;
+    });
+    html += `</div></div>`;
+
+    // Tambahkan UI untuk mengangkat anggota menjadi pengurus (hanya untuk admin)
+    if (isAdmin) {
+      // Kandidat adalah anggota yang sudah punya akses login tapi belum jadi admin/pengurus
+      const kandidat = data.filter(a => a.bolehDaftar && a.kehidupan !== 'wafat' && a.level !== 'admin' && a.level !== 'pengurus');
+      html += `
+        <div style="margin-top:2rem; border-top:1px solid rgba(201,168,76,0.2); padding-top:1.5rem;">
+          <h4 style="font-family:'Cinzel'; color:var(--em); margin-bottom:0.5rem; font-size:0.9rem;">Tambah Jabatan Pengurus</h4>
+          <p style="font-size:0.75rem; color:var(--cb); margin-bottom:1rem;">Pilih anggota yang sudah memiliki akses login untuk diberi jabatan.</p>
+          <div class="tambah-jabatan-grid" style="display:grid; grid-template-columns: 1fr 1fr auto; gap:10px;">
+            <select id="select-calon-pengurus" style="padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--em); color:white; border-radius:6px; font-size:0.85rem;">
+              <option value="">-- Pilih Anggota --</option>
+              ${kandidat.map(k => `<option value="${k.id}">${k.nama} (Gen ${k.generasi})</option>`).join('')}
+            </select>
+            <select id="select-jabatan-baru" style="padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--em); color:white; border-radius:6px; font-size:0.85rem;">
+              ${generateJabatanOptions()}
+            </select>
+            <button class="btn-sm solid" onclick="window.tambahJabatanPengurus()" style="height:auto; padding:8px 16px; width:100%;">+ Tambah Jabatan</button>
+          </div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+    return;
+  }
+
+  // LOGIKA DAFTAR ANGGOTA BIASA
   const cari = (document.getElementById('search-anggota')?.value || '').toLowerCase();
   const container = document.getElementById('daftar-anggota');
+  if (!container) return;
+
+  // Tampilkan filter bar jika di mode daftar
+  const filters = document.getElementById('anggota-filters');
+  if (filters) filters.style.display = 'block';
 
   // Fungsi pembantu untuk cek apakah anggota adalah jalur keturunan (Trah)
   const isTrah = (p) => !!(p.parentId || p.idOrangTua || String(p.generasi) === '0');
@@ -537,91 +719,85 @@ window.renderAnggota = async function() {
   container.innerHTML = htmlOutput;
 };
 
+window.renderBaganPengurus = async function() {
+  const data = await window.ambilData();
+  const container = document.getElementById('bagan-organisasi-visual');
+  if(!container) return;
 
-function kartu(a, allData) {
-  const isMale = a.gender === 'L' || a.jenisKelamin === 'L' || a.jenisKelamin === 'Laki-Laki' || a.gender === 'Laki-laki';
-  const bday = a.tanggalLahir || a.lahir;
-  const ini = a.nama.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-  let usiaTeks = '';
-  
-  if (bday && a.kehidupan !== 'wafat') {
-    const lahir = new Date(bday);
-    const hariIni = new Date();
-    let usia = hariIni.getFullYear() - lahir.getFullYear();
-    if (hariIni.getMonth() < lahir.getMonth() || (hariIni.getMonth() === lahir.getMonth() && hariIni.getDate() < lahir.getDate())) usia--;
-    usiaTeks = ` (${usia} thn)`;
+  const jabatanOrder = JABATAN_LIST.flatMap(g => g.roles.map(r => r.toLowerCase()));
+  const sortFunc = (a, b) => {
+    if (a.level === 'admin' && b.level !== 'admin') return -1;
+    if (b.level === 'admin' && a.level !== 'admin') return 1;
+    const jabatanA = (a.jabatan || '').toLowerCase().trim();
+    const jabatanB = (b.jabatan || '').toLowerCase().trim();
+    const indexA = jabatanOrder.indexOf(jabatanA);
+    const indexB = jabatanOrder.indexOf(jabatanB);
+    const rankA = indexA === -1 ? Infinity : indexA;
+    const rankB = indexB === -1 ? Infinity : indexB;
+    if (rankA !== rankB) return rankA - rankB;
+    return jabatanA.localeCompare(jabatanB);
+  };
+
+  const allPengurus = data.filter(a => a.level === 'admin' || a.level === 'pengurus').sort(sortFunc);
+  if (allPengurus.length === 0) {
+    container.innerHTML = '<div class="kosong-info">Belum ada data pengurus untuk ditampilkan.</div>';
+    return;
   }
 
-  const tWafat = a.tglWafat ? new Date(a.tglWafat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  const sudahWafat = a.kehidupan === 'wafat';
-  
-  // Label Pasangan
-  const sId = a.idPasangan || a.spouseId;
-  let infoPasangan = '';
-  if (sId && allData) {
-    const spouse = allData.find(m => String(m.id) === String(sId));
-    if (spouse) {
-      infoPasangan = `<p class="a-spouse">${isMale ? 'Suami' : 'Istri'} dari ${spouse.panggilan || spouse.nama}</p>`;
+  const createCard = (anggota) => {
+    const inisial = (anggota.nama || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    const foto = anggota.foto ? `<img src="${anggota.foto}" alt="${anggota.nama}" onerror="this.style.display='none'; this.parentElement.textContent='${inisial}';">` : inisial;
+    const displayName = anggota.panggilan || anggota.nama;
+    return `<div class="bagan-card"><div class="bagan-avatar">${foto}</div><p class="bagan-nama">${displayName}</p><p class="bagan-jabatan">${anggota.jabatan || (anggota.level === 'admin' ? 'Penasihat' : 'Pengurus')}</p></div>`;
+  };
+
+  // Pisahkan anggota ke dalam grup masing-masing berdasarkan jabatan
+  const intiOrder = ['ketua paguyuban', 'wakil ketua', 'sekretaris', 'bendahara'];
+  const seksiRoles = JABATAN_LIST.find(g => g.group.includes('Seksi')).roles.map(r => r.toLowerCase());
+
+  const penasihat = [];
+  const inti = [];
+  const seksi = [];
+
+  allPengurus.forEach(p => {
+    const j = (p.jabatan || '').toLowerCase().trim();
+
+    if (j === 'penasihat') {
+      penasihat.push(p);
+    } else if (intiOrder.includes(j)) {
+      inti.push(p);
+    } else if (seksiRoles.includes(j)) {
+      seksi.push(p);
+    } else {
+      // Handle unassigned roles based on level
+      if (p.level === 'admin') {
+        penasihat.push(p); // Admin tanpa jabatan spesifik menjadi Penasihat
+      } else {
+        seksi.push(p); // Pengurus tanpa jabatan spesifik masuk ke seksi umum
+      }
     }
+  });
+
+  // Pastikan urutan 'inti' sesuai dengan standar
+  inti.sort((a, b) => intiOrder.indexOf((a.jabatan || '').toLowerCase()) - intiOrder.indexOf((b.jabatan || '').toLowerCase()));
+
+  let html = `<div class="org-chart">`;
+
+  if (penasihat.length > 0) {
+    html += `<div class="org-level org-level-penasihat">${penasihat.map(createCard).join('')}</div>`;
   }
 
-  const valUrut = a.urutan || a.urutan_anak;
-  const urutanTeks = valUrut ? `<p class="a-urutan">✦ Anak ke-${valUrut}</p>` : '';
+  if (inti.length > 0) {
+    html += `<div class="org-level org-level-inti">${inti.map(createCard).join('')}</div>`;
+  }
 
-  // Badges
-  const isTrah = !!(a.idOrangTua || a.parentId || String(a.generasi) === '0');
-  const badgeTrah = isTrah ? `<span class="badge trah">Garis Keturunan</span>` : (sId ? `<span class="badge spouse-badge">Anggota Masuk</span>` : '');
-  const badgeStatus = sudahWafat ? `<span class="badge wafat-b">🪦 Wafat${tWafat ? ' · ' + tWafat : ''}</span>` : `<span class="badge ${a.status || 'aktif'}">${(a.status || 'aktif') === 'aktif' ? 'Aktif' : 'Tidak Aktif'}</span>`;
-  const badgeAkun = a.password ? `<span class="badge aktif" style="background:rgba(201,168,76,0.2); border-color:var(--em); color:var(--em); font-weight:bold;">${a.level?.toUpperCase()}</span>` : '';
+  if (seksi.length > 0) {
+    html += `<div class="org-level org-level-seksi">${seksi.map(createCard).join('')}</div>`;
+  }
 
-  const isOwner = a.createdBy === penggunaLogin.username;
-  const canEdit = HAK_AKSES[penggunaLogin.level]?.edit || (penggunaLogin.level === 'anggota' && isOwner);
-  const canManage = HAK_AKSES[penggunaLogin.level]?.kelolaAkun;
-
-  return `
-    <div class="a-card ${isMale ? 'male' : 'female'} ${sudahWafat ? 'wafat' : ''}">
-      <div class="a-top">
-        <div class="a-avatar">${a.foto ? `<img src="${a.foto}" alt="${a.nama}" onerror="this.parentElement.innerHTML='${ini}'">` : ini}</div>
-        <div>
-          <p class="a-nama">${sudahWafat ? '🪦 ' : ''}${a.nama}</p>
-          <p class="a-panggilan">${a.panggilan ? '"' + a.panggilan + '"' : ''}</p>
-          ${urutanTeks}
-          ${infoPasangan}
-        </div>
-      </div>
-      <div class="a-info">
-        🎂 ${bday ? new Date(bday).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'} ${usiaTeks}<br>
-        ${penggunaLogin.level !== 'guest' ? `
-          ${a.hp ? '📱 ' + a.hp + '<br>' : ''}
-          ${a.alamat ? '📍 ' + a.alamat : ''}
-        ` : '<p style="font-size:0.65rem; color:var(--cb); font-style:italic; margin-top:5px;">* Login untuk lihat detail</p>'}
-      </div>
-      <div class="a-badges">${badgeStatus}${badgeTrah}${badgeAkun}</div>
-      ${canManage ? `
-        <div onclick="event.stopPropagation()" style="margin-top:10px; border-top:1px dashed rgba(201,168,76,0.2); padding-top:5px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:5px;">
-            <label style="font-size:0.75rem; cursor:pointer;">
-              <input type="checkbox" ${a.bolehDaftar ? 'checked' : ''} onchange="window.toggleIzinDaftar('${a.id}', this.checked)"> Izin Akses Login
-            </label>
-            ${a.bolehDaftar ? `
-              <select style="font-size:0.7rem; padding:1px 4px; background:var(--cs); color:var(--kr); border:1px solid var(--em); border-radius:4px; cursor:pointer;" onchange="window.updateLevelAnggota('${a.id}', this.value)">
-                <option value="anggota" ${a.level === 'anggota' ? 'selected' : ''}>Anggota</option>
-                <option value="pengurus" ${a.level === 'pengurus' ? 'selected' : ''}>Pengurus</option>
-                <option value="admin" ${a.level === 'admin' ? 'selected' : ''}>Admin</option>
-              </select>
-            ` : ''}
-          </div>
-          ${a.password ? `<p style="font-size:0.65rem; color:var(--em); margin-top:3px;">Pass: ${a.password}</p>` : ''}
-        </div>
-      ` : ''}
-      ${canEdit ? `
-        <div class="a-aksi" onclick="event.stopPropagation()">
-          <button class="btn-aksi" onclick="window.bukaEdit('${a.id}')">✏ Edit</button>
-          ${HAK_AKSES[penggunaLogin.level]?.hapus ? `<button class="btn-aksi hapus" onclick="window.bukaHapus('${a.id}', '${a.nama}')">🗑 Hapus</button>` : ''}
-        </div>
-      ` : ''}
-    </div>`;
-}
+  html += `</div>`;
+  container.innerHTML = html;
+};
 
 // ══ LOGIKA BUKU BESAR (LEDGER) ══
 window.renderBukuBesar = async function() {
@@ -762,6 +938,18 @@ window.bukaEditTransaksi = async function(id) {
 
 window.hapusTransaksi = async function(id) {
   if (!confirm('Hapus transaksi ini?')) return;
+  const snapshot = await get(ref(db, `transaksi/${id}`));
+  if (!snapshot.exists()) return;
+  const t = snapshot.val();
+  const isSystem = (t.deskripsi && t.deskripsi.includes('[IURAN]')) || (t.deskripsi && t.deskripsi.includes('[ARISAN]'));
+
+  let pesan = 'Hapus transaksi ini?';
+  if (isSystem) {
+    pesan = 'Peringatan: Menghapus data sistem di sini tidak akan mengubah data di modul Arisan. Lanjutkan?';
+  }
+
+  if (!confirm(pesan)) return;
+
   await remove(ref(db, `transaksi/${id}`));
   toast('Transaksi dihapus.');
   catatLog("Hapus Transaksi", "ID Transaksi: " + id);
@@ -818,9 +1006,37 @@ function startRealtimeStats() {
   onValue(ref(db, "anggota"), (snapshot) => {
     const data = snapshot.exists() ? Object.values(snapshot.val()) : [];
     dataAnggotaCached = data;
-    // ... (kode statistik keanggotaan tetap sama) ...
+    
+    // Hitung statistik dasar
+    const total = data.length;
+    const wafat = data.filter(a => a.kehidupan === 'wafat').length;
+    const hidup = total - wafat;
+
+    // Update elemen UI di Hero Section
+    if(document.getElementById('stat-total')) document.getElementById('stat-total').textContent = total;
+    if(document.getElementById('stat-aktif')) document.getElementById('stat-aktif').textContent = hidup;
+    if(document.getElementById('stat-wafat')) document.getElementById('stat-wafat').textContent = wafat;
+
+    // Hitung dan Render Anggota per Generasi
+    const perGen = {};
+    data.forEach(a => {
+      const g = a.generasi || '0';
+      if(!perGen[g]) perGen[g] = 0;
+      perGen[g]++;
+    });
+    const statsGen = document.getElementById('stats-per-gen');
+    if (statsGen) {
+      statsGen.innerHTML = Object.keys(perGen).sort().map(g => `
+        <div class="stat-card" style="padding: 1rem; text-align: center;">
+          <p class="stat-lbl" style="font-size: 0.65rem;">Gen ${g}</p>
+          <p class="stat-num" style="font-size: 1.2rem; margin-top: 4px;">${perGen[g]}</p>
+        </div>
+      `).join('');
+    }
+
     updateTabunganPribadi(dataAnggotaCached);
     renderAccessCards(dataAnggotaCached);
+    renderPengurusDashboard(dataAnggotaCached);
     refreshDashboardUI();
   });
 
@@ -931,10 +1147,16 @@ function updateTabunganPribadi(members) {
 }
 
 // 7. HELPER UI
-window.bukaPanel = function(nama, el) {
+window.bukaPanel = function(nama, el, pushState = true) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('aktif'));
   document.getElementById('panel-' + nama).classList.add('aktif');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('aktif'));
+
+  // Update Judul Topbar sesuai panel yang aktif agar navigasi lebih jelas
+  const titleMap = { 'dashboard': 'Beranda', 'anggota': 'Manajemen Keluarga', 'logs': 'Log Aktivitas' };
+  if (document.getElementById('topbar-judul')) {
+    document.getElementById('topbar-judul').textContent = titleMap[nama] || 'Paguyuban';
+  }
 
   const backBtn = document.getElementById('topbar-back-btn');
   if (backBtn) {
@@ -942,9 +1164,65 @@ window.bukaPanel = function(nama, el) {
   }
   
   if (el) el.classList.add('aktif');
-  if (nama === 'anggota') window.renderAnggota();
+  if (nama === 'anggota') {
+    // Jika navigasi baru dari menu utama, arahkan ke hub menu dengan history state
+    if (pushState) {
+      window.switchSubPanelAnggota('menu', true);
+      return; // Navigasi selanjutnya dihandle oleh switchSubPanelAnggota
+    }
+  }
   if (nama === 'buku-besar') window.renderBukuBesar();
   if (nama === 'logs') window.renderLogs();
+
+  // Simpan state ke history agar tombol back browser/topbar berfungsi antar panel
+  if (pushState) {
+    history.pushState({ panel: nama }, "", "#" + nama);
+  }
+};
+
+window.switchSubPanelAnggota = function(sub, pushState = true) {
+  const menu = document.getElementById('section-anggota-menu');
+  const listSub = document.getElementById('sub-panel-daftar');
+  const pengurusSub = document.getElementById('sub-panel-pengurus');
+  const baganSub = document.getElementById('sub-panel-bagan');
+  const container = document.getElementById('daftar-anggota');
+  const btnTambahAnggota = document.getElementById('btn-tambah-anggota');
+  const title = document.getElementById('anggota-panel-title');
+  
+  // Sembunyikan semua sub-section terlebih dahulu
+  if (menu) menu.style.display = 'none';
+  if (listSub) listSub.style.display = 'none';
+  if (pengurusSub) pengurusSub.style.display = 'none';
+  if (baganSub) baganSub.style.display = 'none';
+
+  // Sembunyikan tombol tambah anggota secara default, akan ditampilkan jika di tab 'daftar'
+  if (btnTambahAnggota) btnTambahAnggota.style.display = 'none';
+
+  if (sub === 'menu') {
+    if (menu) menu.style.display = 'block';
+    if (title) title.innerHTML = 'Manajemen <em>Keluarga</em>';
+  } else if (sub === 'daftar') {
+    filterAktif = 'semua';
+    if (listSub) listSub.style.display = 'block';
+    if (btnTambahAnggota) btnTambahAnggota.style.display = 'block'; // Tampilkan di sini
+    if (title) title.innerHTML = 'Daftar <em>Anggota</em>';
+    window.renderAnggota();
+  } else if (sub === 'pengurus') {
+    filterAktif = 'pengurus';
+    if (pengurusSub) pengurusSub.style.display = 'block';
+    if (title) title.innerHTML = 'Jabatan <em>Pengurus</em>';
+    window.renderAnggota();
+  } else if (sub === 'bagan') {
+    filterAktif = 'bagan';
+    if (baganSub) baganSub.style.display = 'block';
+    // btnTambahAnggota tetap tersembunyi
+    if (title) title.innerHTML = 'Bagan <em>Struktur</em>';
+    window.renderBaganPengurus();
+  }
+
+  if (pushState) {
+    history.pushState({ panel: 'anggota', sub: sub }, "", "#anggota-" + sub);
+  }
 };
 
 window.filterGen = function(gen, el) {
@@ -958,13 +1236,20 @@ window.bukaModal = (id) => document.getElementById(id).classList.add('aktif');
 window.tutupModal = (id) => document.getElementById(id).classList.remove('aktif');
 
 window.addEventListener('popstate', (e) => {
-  const panel = (e.state && e.state.panel) ? e.state.panel : 'dashboard';
+  const state = e.state || { panel: 'dashboard' };
+  const panel = state.panel || 'dashboard';
+  const sub = state.sub;
+
   const navItems = document.querySelectorAll('.nav-item');
   let targetNav = null;
   navItems.forEach(item => {
     if (item.getAttribute('onclick')?.includes(`'${panel}'`)) targetNav = item;
   });
+
   window.bukaPanel(panel, targetNav, false);
+  if (panel === 'anggota') {
+    window.switchSubPanelAnggota(sub || 'menu', false);
+  }
 });
 
 // Re-check session on load
@@ -976,10 +1261,17 @@ window.addEventListener('load', () => {
     
     // Set initial state untuk history
     const hash = window.location.hash.substring(1) || 'dashboard';
-    history.replaceState({ panel: hash }, "", "#" + hash);
 
-    // Sinkronisasi Panel berdasarkan hash URL (Contoh: #anggota)
-    if (hash) {
+    if (hash.startsWith('anggota-')) {
+      const sub = hash.replace('anggota-', '');
+      history.replaceState({ panel: 'anggota', sub: sub }, "", "#" + hash);
+      window.bukaPanel('anggota', null, false);
+      window.switchSubPanelAnggota(sub, false);
+    } else {
+      history.replaceState({ panel: hash }, "", "#" + hash);
+
+      // Sinkronisasi Panel berdasarkan hash URL (Contoh: #anggota)
+      if (hash) {
       const panelMap = { 'anggota': 'anggota', 'logs': 'logs', 'dashboard': 'dashboard' };
       if (panelMap[hash]) {
         // Cari elemen navigasi terkait untuk memberikan class 'aktif'
@@ -988,8 +1280,9 @@ window.addEventListener('load', () => {
         navItems.forEach(item => {
           if (item.getAttribute('onclick')?.includes(`'${panelMap[hash]}'`)) targetNav = item;
         });
-        window.bukaPanel(panelMap[hash], targetNav);
+        window.bukaPanel(panelMap[hash], targetNav, false);
       }
+    }
     }
   }
 });

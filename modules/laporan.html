@@ -129,9 +129,9 @@
                             <div class="service-icon" style="background:linear-gradient(135deg,#E53935,#ff8a80)">📉</div>
                             <span class="service-label">Buku Pengeluaran</span>
                         </div>
-                        <div class="service-item" id="menu-siklus" onclick="window.showSection('section-siklus')">
-                            <div class="service-icon" style="background:linear-gradient(135deg,#E65100,#FFA726)">🔄</div>
-                            <span class="service-label">Siklus Arisan</span>
+                        <div class="service-item" id="menu-bukubesar" onclick="location.href='../bukubesar.html'">
+                            <div class="service-icon" style="background:linear-gradient(135deg,#4A148C,#AB47BC)">📖</div>
+                            <span class="service-label">Buku Besar</span>
                         </div>
                     </div>
                 </div>
@@ -236,33 +236,6 @@
                 </div>
             </div>
 
-            <!-- SECTION: SIKLUS -->
-            <div id="section-siklus" class="report-section" style="display:none">
-                <div class="panel">
-                    <h3>Status <em>Siklus Pemenang</em></h3>
-                    <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:1rem;">
-                        <div class="stat-card">
-                            <span class="stat-lbl">Sudah Dapat Arisan</span>
-                            <div class="stat-num" id="val-cycle-done">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-lbl">Belum Dapat Arisan</span>
-                            <div class="stat-num" id="val-cycle-todo">0</div>
-                        </div>
-                    </div>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Anggota Belum Dapat (Queue)</th>
-                                    <th>Kategori</th>
-                                </tr>
-                            </thead>
-                            <tbody id="body-report-siklus"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
         </div>
     </main>
 
@@ -286,7 +259,7 @@
                 if (containerAksi) containerAksi.style.display = 'none';
                 
                 // Sembunyikan tombol laporan detail yang bersifat internal/manajerial bagi anggota
-                const toHide = ['btn-iuran', 'btn-pengeluaran', 'btn-siklus', 'btn-putaran', 'menu-iuran', 'menu-pengeluaran', 'menu-siklus'];
+                const toHide = ['btn-iuran', 'btn-pengeluaran', 'btn-putaran', 'menu-iuran', 'menu-pengeluaran', 'menu-bukubesar'];
                 toHide.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
@@ -297,12 +270,12 @@
             const hash = window.location.hash.substring(1);
             const sectionMap = { 
                 'overview': 'section-overview', 'iuran': 'section-iuran', 
-                'pengeluaran': 'section-pengeluaran', 'siklus': 'section-siklus', 
+                'pengeluaran': 'section-pengeluaran', 
                 'putaran': 'section-putaran', 'menu': 'section-laporan-menu'
             };
 
             if (hash && sectionMap[hash]) {
-                const restricted = ['iuran', 'pengeluaran', 'siklus', 'putaran'];
+                const restricted = ['iuran', 'pengeluaran', 'putaran'];
                 if (user.level !== 'anggota' || !restricted.includes(hash)) {
                     history.replaceState({ section: sectionMap[hash] }, "", "#" + hash);
                     window.showSection(sectionMap[hash], document.getElementById('menu-' + hash), false);
@@ -358,7 +331,6 @@
                 populatePeriodeFilter();
                 renderIuranReport();
                 renderPengeluaranReport();
-                renderSiklusReport();
                 renderPutaranReport();
             }
         }
@@ -565,16 +537,6 @@
             </tr>`).join('');
         }
 
-        function renderSiklusReport() {
-            const listJadwal = Array.isArray(window.dataMaster.arisan.jadwal) ? window.dataMaster.arisan.jadwal : Object.values(window.dataMaster.arisan.jadwal || {});
-            const winners = listJadwal.map(j => String(j.penerimaId));
-            const todo = window.dataMaster.anggota.filter(m => m.tipeArisan === 'pokok' && !winners.includes(String(m.id)));
-            document.getElementById('val-cycle-done').textContent = winners.length;
-            document.getElementById('val-cycle-todo').textContent = todo.length;
-            const tbody = document.getElementById('body-report-siklus');
-            tbody.innerHTML = todo.map(m => `<tr><td>${m.nama}</td><td style="font-family:'Cinzel'; font-size:0.6rem">Pokok</td></tr>`).join('');
-        }
-
         window.toggleLaporanSubmenu = function() {
             const submenu = document.getElementById('laporan-submenu');
             const chevron = document.getElementById('laporan-chevron');
@@ -595,7 +557,7 @@
 
         window.showSection = function(id, el, pushState = true) {
             const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
-            const restricted = ['section-iuran', 'section-pengeluaran', 'section-siklus', 'section-putaran'];
+            const restricted = ['section-iuran', 'section-pengeluaran', 'section-putaran'];
             if (user && user.level === 'anggota' && restricted.includes(id)) {
                 return; // Hanya izinkan overview untuk anggota
             }
@@ -605,7 +567,6 @@
                 'section-overview': 'Ringkasan Saldo',
                 'section-iuran': 'Realisasi Iuran',
                 'section-pengeluaran': 'Buku Pengeluaran',
-                'section-siklus': 'Siklus Arisan'
             };
             const subEl = document.getElementById('topbar-subtitle');
             if (subEl) subEl.textContent = subMap[id] || '';

@@ -160,7 +160,8 @@ window.renderBukuBesar = async function() {
     const isMasuk = t.tipe === 'masuk';
     if (isMasuk) totalMasuk += t.jumlah; else totalKeluar += t.jumlah;
     const fotoHtml = t.foto ? `<button class="btn-sm" style="font-size:0.65rem; padding:4px 8px;" onclick="window.lihatBukti('${t.id}')">🖼️ Lihat</button>` : '<span style="opacity:0.3; font-size:0.7rem">-</span>';
-    const isLocked = ['Tabungan', 'Sosial'].includes(t.kategori);
+    // Mengunci transaksi yang berasal dari sistem arisan (Tabungan, Sosial, dan Arisan Pokok/ARISAN)
+    const isLocked = ['Tabungan', 'Sosial'].includes(t.kategori) || (t.deskripsi && (t.deskripsi.includes('[IURAN]') || t.deskripsi.includes('[ARISAN]')));
 
     html += `
       <tr>
@@ -459,9 +460,6 @@ function initBukuBesarPage() {
 
     const btnClearLedger = document.getElementById('btn-bersihkan-ledger');
     if(btnClearLedger) btnClearLedger.style.display = HAK_AKSES[penggunaLogin.level]?.hapus ? 'inline-block' : 'none';
-
-    const btnImportLedger = document.getElementById('btn-import-ledger');
-    if(btnImportLedger) btnImportLedger.style.display = penggunaLogin.level === 'admin' ? 'inline-block' : 'none';
 
     applyMask('trx-jumlah');
 
