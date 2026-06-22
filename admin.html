@@ -989,6 +989,8 @@
 
       <div class="filter-bar">
         <input type="text" class="search-box" placeholder="🔍 Cari nama..." oninput="renderAnggota()" id="search-anggota"/>
+        <button class="filter-btn" onclick="window.expandAllCards()" style="background:var(--emas); color:var(--coklat-tua); font-weight:800; border-color:var(--emas);">↓ Buka Semua</button>
+        <button class="filter-btn" onclick="window.collapseAllCards()" style="background:rgba(201,168,76,0.2); color:var(--emas); border-color:var(--emas);">↑ Tutup Semua</button>
         <button class="filter-btn aktif" onclick="filterGenerasi('semua', this)">Semua</button>
         <button class="filter-btn" onclick="filterGenerasi('1', this)">Gen 1</button>
         <button class="filter-btn" onclick="filterGenerasi('2', this)">Gen 2</button>

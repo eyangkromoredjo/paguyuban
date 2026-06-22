@@ -677,10 +677,11 @@
   <!-- ══ FOOTER ══ -->
   <footer>
     <p class="footer-nama">Paguyuban Keluarga Eyang Kromoredjo</p>
-    <p class="footer-tahun">- Berdiri 1981 · Jakarta -
-    <p style="font-size: 0.7rem; color: var(--coklat-terang); margin-top: 0.5rem; opacity: 0.8; letter-spacing: 1px;">Designed & Developed by Budi Purwanto bin Tukimin </p> 
+      <p class="footer-tahun">- Berdiri 1981 · Jakarta -</p>
+    <p id="footer-generasi" style="font-size: 0.7rem; color: var(--coklat-terang); margin-top: 0.5rem; opacity: 0.8; letter-spacing: 1px;"></p>
     <p style="font-size: 0.7rem; color: var(--coklat-terang); margin-top: 0.2rem; opacity: 0.8; letter-spacing: 1px;">• Juni 2026 •</p>
   </footer>
+
 
   <script type="module">
     import { db } from './js/firebase-config.js';
@@ -712,7 +713,8 @@
           return gen > max ? gen : max;
         }, 0);
         document.getElementById('jumlah-generasi').textContent = maxGen;
-        document.getElementById('footer-generasi').textContent = maxGen;
+        const footerEl = document.getElementById('footer-generasi');
+        if (footerEl) footerEl.textContent = maxGen;
       }
     });
   </script>

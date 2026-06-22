@@ -8,7 +8,7 @@
     <!-- Google Fonts: Inter & Lora agar senada dengan modul anggota -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600&family=Lora:wght=400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Cinzel:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
 
     <link rel="stylesheet" href="../css/style.css">
 
@@ -18,184 +18,193 @@
 
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #FBF9F6;
-            color: #4A4A4A;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--ct);
+            color: var(--kr);
             margin: 0;
             overflow: hidden; /* Supaya geser pohon tidak merusak scrollbar utama */
         }
 
         .pohon-header {
-            background-color: #FFF;
+            background-color: rgba(29, 19, 10, 0.8);
+            backdrop-filter: blur(10px);
             padding: 15px 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            box-shadow: 0 2px 15px rgba(0,0,0,0.2);
             display: flex;
             justify-content: space-between;
             align-items: center;
             position: relative;
             z-index: 10;
-            border-bottom: 1px solid #EAE5DC;
+            border-bottom: 1px solid rgba(201, 168, 76, 0.2);
         }
 
         .pohon-title h2 {
-            font-family: 'Lora', serif;
+            font-family: 'Playfair Display', serif;
             font-weight: 500;
-            color: var(--cokelat-tua);
+            color: var(--em);
             margin: 0;
             font-size: 1.4rem;
         }
 
         .pohon-title p {
             font-size: 0.85rem;
-            color: #333;
+            color: var(--cb);
             margin: 4px 0 0 0;
             font-weight: 500;
         }
 
         .pohon-instructions {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.94);
+            bottom: 25px;
+            left: 25px;
+            background: rgba(29, 19, 10, 0.8);
+            backdrop-filter: blur(8px);
             padding: 14px 18px;
             border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-            font-size: 0.9rem;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            font-size: 0.8rem;
             line-height: 1.7;
             pointer-events: none; /* Supaya tidak mengganggu klik canvas */
-            border-left: 4px solid var(--cokelat-sogan);
+            border: 1px solid rgba(201, 168, 76, 0.2);
             z-index: 5;
             max-width: 280px;
+            color: var(--cb);
         }
 
         .pohon-legend {
             position: absolute;
-            top: 120px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.94);
+            top: 105px;
+            left: 25px;
+            background: rgba(29, 19, 10, 0.8);
+            backdrop-filter: blur(8px);
             padding: 14px 16px;
             border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-            font-size: 0.9rem;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            font-size: 0.8rem;
             line-height: 1.8;
-            border-left: 4px solid var(--emas-redup);
+            border: 1px solid rgba(201, 168, 76, 0.2);
             z-index: 5;
             max-width: 280px;
+            color: var(--cb);
         }
 
         .pohon-legend .legend-item {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .pohon-legend .legend-chip {
-            width: 16px;
-            height: 16px;
-            border-radius: 8px;
-            border: 2px solid;
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
         }
 
-        .pohon-legend .legend-chip.male { background: #E3F2FD; border-color: #1E88E5; }
-        .pohon-legend .legend-chip.female { background: #FCE4EC; border-color: #EC407A; }
-        .pohon-legend .legend-chip.wafat { background: #F5F5F5; border-color: #999; }
+        .pohon-legend .legend-chip.trah { background: none; border: 2px solid var(--em); }
+        .pohon-legend .legend-chip.spouse { background: none; border: 2px solid rgba(201, 168, 76, 0.4); }
+        .pohon-legend .legend-chip.wafat { background: rgba(100,100,100,0.5); border: 2px solid #666; }
 
         /* Area Canvas Tempat Pohon Digambar */
         #canvas-pohon {
             width: 100vw;
             height: calc(100vh - 80px);
             cursor: grab;
-            background: linear-gradient(135deg, #F8F6F3 0%, #F0EBE5 50%, #EDE6DD 100%);
+            background: radial-gradient(ellipse at 50% 50%, rgba(107, 58, 31, 0.15) 0%, transparent 70%), var(--ct);
         }
 
         #canvas-pohon:active {
             cursor: grabbing;
         }
 
-        /* Gaya Garis Penghubung (Links) - modern color */
+        /* Gaya Garis Penghubung (Links) - FUTURISTIK */
         .link {
             fill: none;
-            stroke: #999;
-            stroke-width: 2.5px;
+            stroke: rgba(201, 168, 76, 0.4);
+            stroke-width: 1.5px;
             transition: stroke 0.2s ease;
         }
 
-        /* Gaya Kotak Anggota Keluarga (Nodes) - MODERN DESIGN */
+        /* Gaya Kotak Anggota Keluarga (Nodes) - FUTURISTIK GLASSMORPHISM */
         .node {
             cursor: pointer;
         }
 
         .node-card {
-            fill: #FFF;
-            stroke-width: 2.5px;
+            fill: rgba(201, 168, 76, 0.05);
+            stroke-width: 1.5px;
             rx: 16px;
             ry: 16px;
             transition: all 0.3s ease;
-            filter: drop-shadow(0px 4px 12px rgba(0,0,0,0.08));
+            backdrop-filter: blur(5px);
         }
 
-        .node-card.male {
-            stroke: #1E88E5;
-            fill: #E3F2FD;
+        .node-card.trah {
+            stroke: var(--em);
+            filter: drop-shadow(0px 0px 8px rgba(201, 168, 76, 0.3));
         }
 
-        .node-card.female {
-            stroke: #EC407A;
-            fill: #FCE4EC;
+        .node-card.spouse {
+            stroke: rgba(201, 168, 76, 0.4);
         }
 
+        .node-card.wafat {
+            fill: rgba(80, 80, 80, 0.2);
+            stroke: #666;
+        }
 
         .node:hover .node-card {
-            filter: drop-shadow(0px 6px 16px rgba(0,0,0,0.12));
-            stroke-width: 3px;
+            stroke-width: 2px;
+            filter: drop-shadow(0px 0px 15px rgba(201, 168, 76, 0.5));
         }
 
         .node text {
-            font-family: 'Inter', sans-serif;
-            font-size: 15px;
-            fill: #222222;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            fill: var(--cb);
             pointer-events: none;
         }
 
         .node .nama-utama {
-            font-family: 'calibri', serif;
-            font-weight: 1000;
-            fill: #111111;
-            font-size: 18px;
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            fill: var(--kr);
+            font-size: 17px;
         }
 
-        .node .nama-utama.male { fill: #1E88E5; }
-        .node .nama-utama.female { fill: #EC407A; }
+        .node .nama-utama.wafat-text, .node .nama-pasangan.wafat-text {
+            fill: #999;
+            font-style: italic;
+        }
 
         .node .hati {
             font-size: 16px;
-            fill: #FF4081;
+            fill: var(--em);
+            opacity: 0.6;
         }
 
         .node .nama-pasangan {
-            font-family: 'calibri', serif;
-            font-weight: 1000;
-            font-size: 18px;
+            font-family: 'Playfair Display', serif;
+            font-weight: 500;
+            font-size: 17px;
         }
-
-        .node .nama-pasangan.male { fill: #1E88E5; }
-        .node .nama-pasangan.female { fill: #EC407A; }
 
         .node .label-gen {
             font-size: 11px;
-            fill: #444;
+            fill: var(--em);
             font-weight: 600;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 1px;
         }
 
         .node .collapse-indicator {
-            fill: #FFF;
-            stroke: #000;
+            fill: rgba(201, 168, 76, 0.2);
+            stroke: var(--em);
             stroke-width: 1.5px;
         }
 
         .node .collapse-indicator.collapsed {
-            fill: #FFC107;
+            fill: var(--em);
         }
     </style>
 </head>
@@ -203,12 +212,12 @@
 
     <header class="app-header">
         <div class="app-title-container">
-            <img src="../logo PKEK.jpg" alt="Logo PKEK" class="logo-mini">
-            <h2 style="font-family: 'Lora', serif; font-weight: 800; color: #3E2F22;">Bagan Pohon Silsilah Keluarga Besar</h2>
+            <img src="../logo PKEK.jpg" alt="Logo PKEK" class="logo-mini" style="filter: invert(90%) sepia(21%) saturate(575%) hue-rotate(325deg) brightness(95%) contrast(86%);">
+            <h2 style="font-family: 'Playfair Display', serif; font-weight: 700; color: var(--em);">Bagan Pohon Silsilah Keluarga Besar</h2>
         </div>
        <div class="header-right">
     <span id="user-role-badge" class="badge-user-role">Role</span>
-    <button class="btn-kembali-mini" style="background-color: var(--emas-redup); color: #332200; margin-right: 10px; border: none;" onclick="window.location.href='anggota.html'">← Kembali ke Tabel</button>
+    <button class="btn-kembali-mini" style="background-color: var(--em); color: var(--ct); margin-right: 10px; border: none;" onclick="window.location.href='../dashboard.html#anggota-daftar'">← Kembali ke Daftar</button>
     <button class="btn-kembali-mini" style="color: var(--krem-hangat); border-color: var(--emas-redup); font-weight: 700;" onclick="window.location.href='../dashboard.html'">← Menu Utama</button>
 </div>
     </header>
@@ -223,9 +232,9 @@
 
     <div class="pohon-legend">
         <div style="font-weight:600; margin-bottom:8px;">Keterangan Bagan</div>
-        <div class="legend-item"><span class="legend-chip male"></span> Anggota Laki-Laki</div>
-        <div class="legend-item"><span class="legend-chip female"></span> Anggota Perempuan</div>
-        <div class="legend-item"><span class="legend-chip wafat"></span> Anggota Wafat ⚰️</div>
+        <div class="legend-item"><span class="legend-chip trah"></span> Garis Keturunan</div>
+        <div class="legend-item"><span class="legend-chip spouse"></span> Anggota Masuk</div>
+        <div class="legend-item"><span class="legend-chip wafat"></span> Telah Wafat</div>
     </div>
 
     <!-- Wadah SVG D3.js -->
@@ -285,6 +294,7 @@
                     nama: nodeSekarang.nama,
                     generasi: nodeSekarang.generasi,
                     wafat: nodeSekarang.wafat,
+                    isTrah: !!(nodeSekarang.parentId || String(nodeSekarang.generasi) === '0'),
                     spouseId: nodeSekarang.spouseId,
                     pasangan: null,
                     children: []
@@ -298,9 +308,8 @@
                 }
                 if (jodoh) {
                     nodeD3.pasangan = {
-                        nama: jodoh.nama,
-                        wafat: jodoh.wafat,
-                        jenisKelamin: jodoh.jenisKelamin || null
+                        nama: jodoh.nama, 
+                        wafat: jodoh.wafat
                     };
                 }
 
@@ -409,11 +418,9 @@
                 // Gambar Kotak (Background Box) - Modern Design
                 nodeEnter.append("rect")
                     .attr("class", d => {
-                        let cls = "node-card";
-                        if (d.data.wafat) cls += " wafat";
-                        else if (d.data.jenisKelamin === "Laki-Laki") cls += " male";
-                        else if (d.data.jenisKelamin === "Perempuan") cls += " female";
-                        return cls;
+                        if (d.data.wafat) return "node-card wafat";
+                        if (d.data.isTrah) return "node-card trah";
+                        return "node-card spouse";
                     })
                     .attr("width", nodeWidth)
                     .attr("height", nodeHeight)
@@ -429,16 +436,11 @@
                 // Nama Utama (Atas)
                 nodeEnter.append("text")
                     .attr("class", d => {
-                        let cls = "nama-utama";
-                        if (!d.data.wafat) {
-                            if (d.data.jenisKelamin === "Laki-Laki") cls += " male";
-                            else if (d.data.jenisKelamin === "Perempuan") cls += " female";
-                        }
-                        return cls;
+                        return d.data.wafat ? "nama-utama wafat-text" : "nama-utama";
                     })
                     .attr("text-anchor", "middle")
                     .attr("y", namaUtamaY)
-                    .text(d => d.data.nama + (d.data.wafat ? " ⚰️" : ""));
+                    .text(d => d.data.nama);
 
                 // Label Generasi (kecil di pojok kanan atas)
                 nodeEnter.append("text")
@@ -462,14 +464,11 @@
                         // Nama Pasangan (Bawah)
                         groupKlmpk.append("text")
                             .attr("class", d => {
-                                let cls = "nama-pasangan";
-                                if (d.data.pasangan.jenisKelamin === "Laki-Laki") cls += " male";
-                                else if (d.data.pasangan.jenisKelamin === "Perempuan") cls += " female";
-                                return cls;
+                                return d.data.pasangan.wafat ? "nama-pasangan wafat-text" : "nama-pasangan";
                             })
                             .attr("text-anchor", "middle")
                             .attr("y", pasanganTextY)
-                            .text(d.data.pasangan.nama + (d.data.pasangan.wafat ? " ⚰️" : ""));
+                            .text(d.data.pasangan.nama);
                     }
 
                     // Indikator collapse (lingkaran di bawah kotak)
@@ -512,7 +511,7 @@
             }
 
             // Fokuskan kamera otomatis tepat di tengah atas pada nama Eyang mula-mula
-            svg.call(fungsiZoom.transform, d3.zoomIdentity.translate(width / 2, 60).scale(0.85));
+            svg.call(fungsiZoom.transform, d3.zoomIdentity.translate(width / 2, 80).scale(0.8));
         }
     </script>
 </body>

@@ -17,6 +17,7 @@ const HAK_AKSES = {
 
 let penggunaLogin = null;
 let filterAktif = 'semua', idHapusPending = null;
+let openedCardMemberIds = []; // Track opened cards untuk preserve state saat re-render
 
 // 2. FUNGSI DATABASE UTAMA
 window.ambilData = async function() {
@@ -334,6 +335,71 @@ function kartuPeriode(p, nominal) {
       </div>`;
 }
 
+function kartu(anggota) {
+    const isMale = anggota.gender === 'L' || anggota.jenisKelamin === 'L' || anggota.gender === 'Laki-laki' || anggota.jenisKelamin === 'Laki-laki';
+    const genderClass = isMale ? 'male' : 'female';
+    const inisial = (anggota.nama || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    const lahirRaw = anggota.lahir || anggota.tanggalLahir || '';
+    const lahir = lahirRaw ? new Date(lahirRaw).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const urutanVal = anggota.urutan || anggota.urutan_anak;
+    const urutanTeks = urutanVal ? `<p class="a-urutan">✦ Anak ke-${urutanVal}</p>` : '';
+    const statusKey = anggota.kehidupan === 'wafat' || anggota.status === 'wafat' ? 'wafat-b' : ((anggota.kehidupan === 'aktif' || anggota.status === 'aktif') ? 'aktif' : 'tidak-aktif');
+    const statusLabel = statusKey === 'wafat-b' ? 'Wafat' : statusKey === 'aktif' ? 'Aktif' : 'Tidak Aktif';
+    const wafatIcon = statusKey === 'wafat-b' ? '🪦 ' : '';
+
+    return `
+      <div class="a-card ${genderClass}">
+        <div class="a-top">
+          <div class="a-avatar">${inisial}</div>
+          <div>
+            <p class="a-nama">${wafatIcon}${anggota.nama || '-'}</p>
+            <p class="a-panggilan">${anggota.panggilan ? '"' + anggota.panggilan + '"' : ''}</p>
+          </div>
+        </div>
+        ${urutanTeks}
+        <div class="a-info">
+          ${anggota.hp ? `📱 ${anggota.hp}<br>` : ''}
+          ${lahir ? `🎂 ${lahir}<br>` : ''}
+          ${anggota.alamat ? `📍 ${anggota.alamat}` : ''}
+        </div>
+        <div class="a-badges">
+          <span class="badge ${statusKey}">${statusLabel}</span>
+          ${anggota.bolehDaftar ? '<span class="badge trah">Trah</span>' : ''}
+          ${anggota.bolehDaftar ? '<span class="badge aktif">Login Aktif</span>' : '<span class="badge tidak-aktif">Login Mati</span>'}
+        </div>
+        ${(penggunaLogin?.level === 'admin' || penggunaLogin?.level === 'pengurus') ? `
+          <div class="a-aksi" style="margin-top:0.85rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+            <button onclick="window.bukaFormEdit('${anggota.id}')" style="padding:0.5rem 1rem; background:var(--emas); color:var(--coklat-tua); border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">✏ Edit</button>
+            ${penggunaLogin?.level === 'admin' ? `<button onclick="window.bukaKonfirmasiHapus('${anggota.id}', '${anggota.nama.replace(/'/g, "\\'")}')" style="padding:0.5rem 1rem; background:#E05C5C; color:#FFF; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">🗑 Hapus</button>` : ''}
+          </div>
+        ` : ''}
+        ${penggunaLogin?.level === 'admin' ? `
+          <div class="a-akses-control" style="margin-top:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
+            <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; color:var(--text-dark);">
+              <input type="checkbox" onchange="window.toggleIzinDaftar('${anggota.id}', this.checked)" ${anggota.bolehDaftar ? 'checked' : ''}>
+              Izinkan login anggota
+            </label>
+            ${anggota.bolehDaftar ? `
+              <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; font-size:0.72rem; color:var(--text-muted);">
+                <span>Username: ${anggota.panggilan ? anggota.panggilan.toLowerCase() : '-'} </span>
+                <span>Password: ${anggota.password ? anggota.password : '(otomatis)'}</span>
+              </div>
+            ` : ''}
+            <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin-top:0.4rem; font-size:0.72rem; color:var(--text-muted);">
+              <label style="display:flex; flex-direction:column; gap:0.25rem;">
+                <span style="font-size:0.68rem; opacity:0.8;">Hak Akses</span>
+                <select onchange="window.updateLevelAnggota('${anggota.id}', this.value)" ${!anggota.bolehDaftar ? 'disabled' : ''} style="padding:0.45rem 0.6rem; border-radius:8px; border:1px solid var(--emas); background: var(--cokelat-sogan); color: var(--krem-hangat); min-width:130px; ${!anggota.bolehDaftar ? 'opacity: 0.7; cursor: not-allowed;' : 'cursor: pointer;'}">
+                  <option value="anggota" ${anggota.level === 'anggota' ? 'selected' : ''}>Anggota</option>
+                  <option value="pengurus" ${anggota.level === 'pengurus' ? 'selected' : ''}>Pengurus</option>
+                  <option value="admin" ${anggota.level === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        ` : ''}
+      </div>`;
+}
+
 window.bukaDetail = async function(id) {
     const snap = await get(ref(db, `arisan/${id}`));
     if(!snap.exists()) return;
@@ -414,10 +480,27 @@ window.updateLevelAnggota = async function(id, newLevel) {
   const d = await window.ambilData();
   const a = d.find(x => String(x.id) === String(id));
   if(!a) return;
+  if (!a.bolehDaftar) return toast("Aktifkan terlebih dahulu izin login sebelum memilih level.");
 
   a.level = newLevel;
   await simpanSatu(a);
   toast(`Level ${a.nama} diperbarui menjadi ${newLevel.toUpperCase()}.`);
+  await window.renderAnggota();
+};
+
+// Expand/Collapse All Cards
+window.expandAllCards = function() {
+  document.querySelectorAll('.a-card-stack').forEach(card => {
+    card.classList.add('terbuka');
+  });
+  toast('Semua kartu dibuka');
+};
+
+window.collapseAllCards = function() {
+  document.querySelectorAll('.a-card-stack').forEach(card => {
+    card.classList.remove('terbuka');
+  });
+  toast('Semua kartu ditutup');
 };
 
 window.updateJabatanAnggota = async function(id, newJabatan) {
@@ -464,7 +547,8 @@ window.tambahJabatanPengurus = async function() {
   a.level = 'pengurus';
   a.jabatan = jabatan;
   await simpanSatu(a);
-  toast(`${a.nama} telah ditambahkan sebagai ${jabatan}.`);
+  const action = a.level === 'pengurus' ? 'diperbarui' : 'ditambahkan';
+  toast(`${a.nama} telah ${action} sebagai ${jabatan}.`);
   await window.renderAnggota(); // Render ulang untuk menampilkan perubahan
 };
 
@@ -486,6 +570,13 @@ window.hapusJabatanPengurus = async function(id) {
 // 5. UI & RENDER
 window.renderAnggota = async function() {
   const data = await window.ambilData();
+  
+  // SIMPAN STATE CARD YANG TERBUKA SEBELUM RENDER (PALING AWAL!)
+  const openedStackIds = new Set();
+  document.querySelectorAll('.a-card-stack.terbuka').forEach(cardStack => {
+    const id = cardStack.getAttribute('data-anggota-id');
+    if (id) openedStackIds.add(id);
+  });
 
   // LOGIKA KHUSUS HALAMAN PENGURUS (MANAJEMEN JABATAN)
   if (filterAktif === 'pengurus') {
@@ -535,7 +626,7 @@ window.renderAnggota = async function() {
         }
         </div>
         ${isAdmin ? `<div class="pengurus-grid-item aksi" style="text-align:right;">
-          ${a.level === 'pengurus' ? `<button class="btn-sm danger" onclick="window.hapusJabatanPengurus('${a.id}')">Copot Jabatan</button>` : ''}
+          ${a.level === 'pengurus' ? `<button class="btn-sm danger" onclick="window.hapusJabatanPengurus('${a.id}')" style="padding:6px 12px; background:#E53935; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600;">🗑 Copot Jabatan</button>` : a.level === 'admin' ? `<span style="font-size:0.65rem; color:var(--text-muted); font-style:italic;">Admin tidak bisa dicopot</span>` : ''}
         </div>` : ''}
       </div>`;
     });
@@ -543,27 +634,35 @@ window.renderAnggota = async function() {
 
     // Tambahkan UI untuk mengangkat anggota menjadi pengurus (hanya untuk admin)
     if (isAdmin) {
-      // Kandidat adalah anggota yang sudah punya akses login tapi belum jadi admin/pengurus
-      const kandidat = data.filter(a => a.bolehDaftar && a.kehidupan !== 'wafat' && a.level !== 'admin' && a.level !== 'pengurus');
+      // Kandidat adalah anggota yang sudah punya akses login (termasuk yang sudah jadi pengurus untuk bisa diubah jabatannya)
+      const kandidat = data.filter(a => a.bolehDaftar && a.kehidupan !== 'wafat' && a.level !== 'admin');
       html += `
         <div style="margin-top:2rem; border-top:1px solid rgba(201,168,76,0.2); padding-top:1.5rem;">
-          <h4 style="font-family:'Cinzel'; color:var(--em); margin-bottom:0.5rem; font-size:0.9rem;">Tambah Jabatan Pengurus</h4>
-          <p style="font-size:0.75rem; color:var(--cb); margin-bottom:1rem;">Pilih anggota yang sudah memiliki akses login untuk diberi jabatan.</p>
+          <h4 style="font-family:'Cinzel'; color:var(--em); margin-bottom:0.5rem; font-size:0.9rem;">Tambah/Ubah Jabatan Pengurus</h4>
+          <p style="font-size:0.75rem; color:var(--cb); margin-bottom:1rem;">Pilih anggota untuk menambah atau mengubah jabatan. Anggota yang sudah memiliki jabatan juga akan muncul di sini.</p>
           <div class="tambah-jabatan-grid" style="display:grid; grid-template-columns: 1fr 1fr auto; gap:10px;">
             <select id="select-calon-pengurus" style="padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--em); color:white; border-radius:6px; font-size:0.85rem;">
               <option value="">-- Pilih Anggota --</option>
-              ${kandidat.map(k => `<option value="${k.id}">${k.nama} (Gen ${k.generasi})</option>`).join('')}
+              ${kandidat.map(k => `<option value="${k.id}">${k.nama} (Gen ${k.generasi})${k.jabatan ? ' - ' + k.jabatan : ''}</option>`).join('')}
             </select>
             <select id="select-jabatan-baru" style="padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--em); color:white; border-radius:6px; font-size:0.85rem;">
               ${generateJabatanOptions()}
             </select>
-            <button class="btn-sm solid" onclick="window.tambahJabatanPengurus()" style="height:auto; padding:8px 16px; width:100%;">+ Tambah Jabatan</button>
+            <button class="btn-sm solid" onclick="window.tambahJabatanPengurus()" style="height:auto; padding:8px 16px; width:100%;">+ Simpan Jabatan</button>
           </div>
         </div>
       `;
     }
 
     container.innerHTML = html;
+    
+    // Restore card state untuk halaman pengurus
+    document.querySelectorAll('.a-card-stack').forEach(cardStack => {
+      const id = cardStack.getAttribute('data-anggota-id');
+      if (id && openedStackIds.has(id)) {
+        cardStack.classList.add('terbuka');
+      }
+    });
     return;
   }
 
@@ -637,8 +736,8 @@ window.renderAnggota = async function() {
 
   let htmlOutput = '';
   Object.keys(perGen).sort().forEach(g => {
-    // Tentukan apakah bagian ini harus dibuka otomatis (jika filter aktif atau sedang cari)
-    const isExpanded = filterAktif !== 'semua' || cari !== '';
+    // Selalu buka semua generasi 0-7
+    const isExpanded = true;
 
     let genCardsHtml = '';
     const renderedIds = new Set();
@@ -698,7 +797,8 @@ window.renderAnggota = async function() {
       }
 
       if (partners.length > 0) {
-        familyContentHtml += `<div class="a-card-stack" onclick="if(!event.target.closest('.a-aksi')) this.classList.toggle('terbuka')">${stack.map(member => kartu(member, data)).join('')}</div>`;
+        const mainMemberId = stack[0].id;
+        familyContentHtml += `<div class="a-card-stack" data-anggota-id="${mainMemberId}" onclick="if(!event.target.closest('.a-aksi') && !event.target.closest('.a-akses-control') && !event.target.closest('input') && !event.target.closest('select')) this.classList.toggle('terbuka')">${stack.map(member => kartu(member, data)).join('')}</div>`;
         stack.forEach(m => renderedIds.add(m.id));
       } else {
         familyContentHtml += kartu(a, data);
@@ -716,7 +816,16 @@ window.renderAnggota = async function() {
     </div>`;
   });
 
+  // Simpan ID dari card stack yang terbuka sebelum render
   container.innerHTML = htmlOutput;
+  
+  // Restore state card yang terbuka setelah render untuk halaman anggota
+  document.querySelectorAll('.a-card-stack').forEach(cardStack => {
+    const id = cardStack.getAttribute('data-anggota-id');
+    if (id && openedStackIds.has(id)) {
+      cardStack.classList.add('terbuka');
+    }
+  });
 };
 
 window.renderBaganPengurus = async function() {
@@ -724,12 +833,30 @@ window.renderBaganPengurus = async function() {
   const container = document.getElementById('bagan-organisasi-visual');
   if(!container) return;
 
+  const normalizeJabatan = (value) => {
+    const jab = String(value || '').toLowerCase().trim();
+    if (!jab) return '';
+    if (jab.includes('penasihat')) return 'penasihat';
+    if (jab.includes('wakil ketua')) return 'wakil ketua';
+    if (jab.includes('ketua')) return 'ketua paguyuban';
+    if (jab.includes('sekretaris')) return 'sekretaris';
+    if (jab.includes('bendahara')) return 'bendahara';
+    if (jab.includes('humas')) return 'seksi humas';
+    if (jab.includes('acara')) return 'seksi acara';
+    if (jab.includes('konsumsi')) return 'seksi konsumsi';
+    if (jab.includes('dana')) return 'seksi dana & sosial';
+    if (jab.includes('dokumentasi')) return 'seksi dokumentasi';
+    if (jab.includes('koordinator wilayah')) return 'koordinator wilayah';
+    if (jab.includes('perwakilan generasi')) return 'perwakilan generasi';
+    return jab;
+  };
+
   const jabatanOrder = JABATAN_LIST.flatMap(g => g.roles.map(r => r.toLowerCase()));
   const sortFunc = (a, b) => {
     if (a.level === 'admin' && b.level !== 'admin') return -1;
     if (b.level === 'admin' && a.level !== 'admin') return 1;
-    const jabatanA = (a.jabatan || '').toLowerCase().trim();
-    const jabatanB = (b.jabatan || '').toLowerCase().trim();
+    const jabatanA = normalizeJabatan(a.jabatan || '');
+    const jabatanB = normalizeJabatan(b.jabatan || '');
     const indexA = jabatanOrder.indexOf(jabatanA);
     const indexB = jabatanOrder.indexOf(jabatanB);
     const rankA = indexA === -1 ? Infinity : indexA;
@@ -754,13 +881,15 @@ window.renderBaganPengurus = async function() {
   // Pisahkan anggota ke dalam grup masing-masing berdasarkan jabatan
   const intiOrder = ['ketua paguyuban', 'wakil ketua', 'sekretaris', 'bendahara'];
   const seksiRoles = JABATAN_LIST.find(g => g.group.includes('Seksi')).roles.map(r => r.toLowerCase());
+  const koordinatorRoles = JABATAN_LIST.find(g => g.group.includes('Koordinator')).roles.map(r => r.toLowerCase());
 
   const penasihat = [];
   const inti = [];
   const seksi = [];
+  const koordinator = [];
 
   allPengurus.forEach(p => {
-    const j = (p.jabatan || '').toLowerCase().trim();
+    const j = normalizeJabatan(p.jabatan || '');
 
     if (j === 'penasihat') {
       penasihat.push(p);
@@ -768,6 +897,8 @@ window.renderBaganPengurus = async function() {
       inti.push(p);
     } else if (seksiRoles.includes(j)) {
       seksi.push(p);
+    } else if (koordinatorRoles.includes(j)) {
+      koordinator.push(p);
     } else {
       // Handle unassigned roles based on level
       if (p.level === 'admin') {
@@ -779,20 +910,36 @@ window.renderBaganPengurus = async function() {
   });
 
   // Pastikan urutan 'inti' sesuai dengan standar
-  inti.sort((a, b) => intiOrder.indexOf((a.jabatan || '').toLowerCase()) - intiOrder.indexOf((b.jabatan || '').toLowerCase()));
+  inti.sort((a, b) => {
+    const ja = normalizeJabatan(a.jabatan || '');
+    const jb = normalizeJabatan(b.jabatan || '');
+    return intiOrder.indexOf(ja) - intiOrder.indexOf(jb);
+  });
 
-  let html = `<div class="org-chart">`;
+  const renderGroup = (title, members, levelClass) => `
+    <div class="org-chart-group">
+      <div class="org-chart-title">${title}</div>
+      <div class="org-level ${levelClass}">
+        ${members.map(createCard).join('')}
+      </div>
+    </div>`;
+
+  let html = `<div class="org-chart">`; 
 
   if (penasihat.length > 0) {
-    html += `<div class="org-level org-level-penasihat">${penasihat.map(createCard).join('')}</div>`;
+    html += renderGroup('Penasihat', penasihat, 'org-level-penasihat');
   }
 
   if (inti.length > 0) {
-    html += `<div class="org-level org-level-inti">${inti.map(createCard).join('')}</div>`;
+    html += renderGroup('Struktur Intil', inti, 'org-level-inti');
   }
 
   if (seksi.length > 0) {
-    html += `<div class="org-level org-level-seksi">${seksi.map(createCard).join('')}</div>`;
+    html += renderGroup('Seksi / Divisi', seksi, 'org-level-seksi');
+  }
+
+  if (koordinator.length > 0) {
+    html += renderGroup('Koordinator', koordinator, 'org-level-koordinator');
   }
 
   html += `</div>`;
