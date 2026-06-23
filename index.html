@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paguyuban Keluarga Eyang Kromoredjo</title>
+  <meta name="description" content="Situs resmi Paguyuban Keluarga Eyang Kromoredjo - Menjaga tali silaturahmi lintas generasi sejak 1981." />
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Paguyuban Keluarga Eyang Kromoredjo" />
+  <meta property="og:description" content="Satu Darah, Satu Hati. Merawat silaturahmi dari Solo hingga Jakarta." />
+
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Primary - DANA Blue */
+      --primary:       #0054a6;
+      --primary-dark:  #003d7a;
+      --primary-mid:   #0066cc;
+      --primary-light: #e8f0fd;
+
+      /* Accents */
+      --accent-orange: #F5A623;
+      --accent-green:  #00B746;
+      --accent-purple: #7B2FBE;
+      --accent-teal:   #00BCD4;
+      --accent-red:    #E53935;
+
+      /* Neutrals */
+      --bg:       #f0f4f8;
+      --bg-card:  #ffffff;
+      --text-dark:#1a1a2e;
+      --text-mid: #4a5568;
+      --text-light:#718096;
+      --text-muted:#a0aec0;
+      --border:   #e2e8f0;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 16px rgba(0,84,166,0.12);
+      --shadow-lg: 0 8px 32px rgba(0,84,166,0.18);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+
+    /* ── SOFT OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(169,98,42,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.06) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+      padding: 2.5rem 1.5rem 5rem;
+      overflow: hidden;
+      background: linear-gradient(135deg, #002a5e 0%, var(--primary-dark) 50%, var(--primary) 100%);
+    }
+
+    .hero::before, .hero::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.04);
+      pointer-events: none;
+    }
+    .hero::before {
+      width: 700px; height: 700px;
+      top: -200px; right: -200px;
+    }
+    .hero::after {
+      width: 500px; height: 500px;
+      bottom: -150px; left: -150px;
+    }
+
+    .hero-content-wrapper {
+      margin-top: 5rem;
+      background: var(--bg);
+      border-radius: 24px 24px 0 0;
+      position: relative;
+      z-index: 5;
+      padding: 2.5rem 1.5rem;
+      width: 100%;
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+    }
+
+    .ornamen-bawah {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--primary-dark), #fff, var(--accent-orange), #fff, var(--primary-dark));
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      max-width: 750px;
+      animation: fadeInUp 1.2s ease both;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .label-atas {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeInUp 1s ease 0.3s both;
+    }
+
+    .logo-ornamen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeInUp 1s ease 0.5s both;
+    }
+
+    .garis-emas {
+      flex: 1;
+      max-width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5));
+    }
+    .garis-emas.kanan {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.5), transparent);
+    }
+
+    .diamond {
+      width: 8px; height: 8px;
+      background: var(--accent-orange);
+      transform: rotate(45deg);
+      box-shadow: 0 0 10px var(--accent-orange);
+    }
+
+    .judul-utama {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.1rem, 3.5vw, 1.5rem);
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeInUp 1s ease 0.7s both;
+    }
+
+    .judul-besar {
+      font-family: 'Outfit', serif;
+      font-size: clamp(2.8rem, 8vw, 5.5rem);
+      font-weight: 900;
+      line-height: 1;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeInUp 1s ease 0.9s both;
+      text-shadow: 0 4px 30px rgba(0,0,0,0.4);
+    }
+
+    .judul-italic {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: clamp(1.6rem, 5vw, 3rem);
+      color: #fff;
+      opacity: 0;
+      animation: fadeInUp 1s ease 1.0s both;
+    }
+
+    .logo-ornamen-2 {
+      margin: 1.8rem auto;
+      opacity: 0.6;
+      animation: fadeInUp 1s ease 1.1s both;
+    }
+
+    .deskripsi {
+      font-size: clamp(0.9rem, 2vw, 1.05rem);
+      line-height: 1.9;
+      color: #fff;
+      opacity: 0.9;
+      max-width: 580px;
+      margin: 0 auto 2.5rem;
+      font-style: italic;
+      opacity: 0;
+      animation: fadeInUp 1s ease 1.2s both;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      margin-bottom: 3rem;
+      opacity: 0;
+      animation: fadeInUp 1s ease 1.3s both;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-angka {
+      font-family: 'Cinzel', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--accent-orange);
+      text-shadow: 0 2px 12px rgba(245, 166, 35, 0.4);
+      display: block;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 0.3rem;
+      display: block;
+    }
+
+    .stat-divider {
+      width: 1px;
+      background: rgba(255,255,255,0.2);
+      align-self: stretch;
+    }
+
+    .tombol-row {
+      display: flex;
+      gap: 1.2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeInUp 1s ease 1.4s both;
+    }
+
+    .tombol-masuk {
+      display: inline-block;
+      padding: 1rem 2.2rem;
+      border: 1px solid #fff;
+      color: #fff;
+      font-family: 'Cinzel', serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: pointer;
+      background: transparent;
+      position: relative;
+      overflow: hidden;
+      transition: color 0.4s ease;
+    }
+
+    .tombol-masuk::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      transform: translateX(-100%);
+      transition: transform 0.4s ease;
+      z-index: -1;
+    }
+
+    .tombol-masuk:hover { color: var(--primary-dark); }
+    .tombol-masuk:hover::before { transform: translateX(0); }
+
+    /* Tombol solid — aksi utama */
+    .tombol-solid {
+      display: inline-block;
+      padding: 1rem 2.2rem;
+      border: 1px solid var(--emas);
+      background: var(--emas);
+      color: var(--coklat-tua);
+      font-family: 'Cinzel', serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.4s ease, color 0.4s ease;
+      font-weight: 600;
+    }
+
+    .tombol-solid:hover {
+      background: var(--emas-muda);
+      border-color: var(--emas-muda);
+    }
+
+    .hero-logo-wrapper {
+      position: relative;
+      width: clamp(120px, 18vw, 160px);
+      aspect-ratio: 1 / 1;
+      margin: 0 auto 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      padding: 4px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+      filter: drop-shadow(0 0 15px rgba(201, 168, 76, 0.4));
+      z-index: 10;
+    }
+
+    /* Efek Cahaya Berputar di Pinggiran (Orbit) */
+    .hero-logo-wrapper::before {
+      content: '';
+      position: absolute;
+      width: 150%;
+      height: 150%;
+      background: conic-gradient(
+        transparent 0deg, 
+        var(--emas) 20deg, 
+        var(--emas-muda) 40deg, 
+        transparent 60deg,
+        transparent 180deg,
+        var(--emas) 200deg,
+        var(--emas-muda) 220deg,
+        transparent 240deg
+      );
+      animation: rotate-border 3s linear infinite;
+    }
+
+    .hero-logo {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border-radius: 50%;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Efek Berkilau (Shimmer/Glint) di Atas Logo */
+    .hero-logo-wrapper::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      z-index: 3;
+      background: linear-gradient(
+        135deg, 
+        transparent 0%, 
+        transparent 45%, 
+        rgba(255, 255, 255, 0.7) 50%, 
+        transparent 55%, 
+        transparent 100%
+      );
+      background-size: 250% 250%;
+      animation: logo-shimmer 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes rotate-border {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    @keyframes logo-shimmer {
+      0%   { background-position: -200% -200%; }
+      25%  { background-position: 200% 200%; }
+      100% { background-position: 200% 200%; }
+    }
+
+    /* ── SECTION SEJARAH ── */
+    .section-sejarah {
+      background: var(--bg);
+      padding: 6rem 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .section-sejarah::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230054a6' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      opacity: 1;
+    }
+
+    .sejarah-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .section-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.4em;
+      color: var(--primary);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .section-judul {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      color: var(--text-dark);
+      margin-bottom: 1rem;
+    }
+
+    .section-judul em {
+      color: var(--primary);
+      font-style: italic;
+    }
+
+    .ornamen-tengah {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      margin: 1.5rem auto 2rem;
+    }
+
+    .ornamen-tengah .line {
+      width: 60px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--primary));
+    }
+    .ornamen-tengah .line.r {
+      background: linear-gradient(90deg, var(--primary), transparent);
+    }
+
+    .sejarah-teks {
+      font-size: 1.05rem;
+      line-height: 2;
+      color: var(--text-mid);
+      font-style: italic;
+      opacity: 1;
+    }
+
+    /* ── SECTION NILAI ── */
+    .section-nilai {
+      background: #fff;
+      padding: 5rem 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .nilai-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      max-width: 900px;
+      margin: 3rem auto 0;
+    }
+
+    .nilai-card {
+      border: 2px solid rgba(201,168,76,0.2);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      position: relative;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .nilai-card::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: 20%; right: 20%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .nilai-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-md); }
+    .nilai-card:hover::before { opacity: 1; }
+
+    .nilai-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .nilai-judul {
+      font-family: 'Cinzel', serif;
+      font-size: .95rem;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      margin-bottom: 0.8rem;
+    }
+
+    .nilai-desc {
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--text-mid);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 2.5rem;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-nama {
+      font-family: 'Cinzel', serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-tahun {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 600px) {
+      .stats-row { gap: 1.5rem; }
+      .stat-angka { font-size: 1.5rem; }
+      .hero::before { width: 400px; height: 400px; }
+      .hero::after { width: 300px; height: 300px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ HERO ══ -->
+  <section class="hero">
+    <div class="ornamen-atas"></div>
+
+    <div class="hero-inner">
+      <div class="hero-logo-wrapper">
+        <img src="logo PKEK.jpg" alt="Logo PKEK" class="hero-logo">
+      </div>
+      <p class="label-atas">Berdiri sejak 1981 · Jakarta</p>
+
+      <div class="logo-ornamen">
+        <div class="garis-emas"></div>
+        <div class="diamond"></div>
+        <div class="garis-emas kanan"></div>
+      </div>
+
+      <p class="judul-utama">Paguyuban Keluarga</p>
+      <h1 class="judul-besar">Eyang<br>Kromoredjo</h1>
+      <p class="judul-italic">Satu Darah, Satu Hati</p>
+
+      <div class="logo-ornamen-2">
+        <div class="ornamen-tengah">
+          <div class="line"></div>
+          <div class="diamond" style="width:6px;height:6px;background:#fff;transform:rotate(45deg);box-shadow:0 0 10px #fff"></div>
+          <div class="line r"></div>
+        </div>
+      </div>
+
+      <p class="deskripsi">
+        Bermula dari tanah Solo yang kaya budaya, para pendahulu keluarga Kromoredjo
+        merantau ke Jakarta membawa serta nilai-nilai luhur: kebersamaan, gotong royong,
+        dan silaturahmi yang tak putus. Hingga saat ini, paguyuban keluarga ini
+        terus tumbuh — bukan sekadar ikatan darah, melainkan ikatan hati yang dirawat bersama.
+      </p>
+
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-angka" id="tahun-berjalan">45</span>
+          <span class="stat-label">Tahun Berjalan</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-angka" id="jumlah-generasi">5</span>
+          <span class="stat-label">Generasi</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-angka">1981</span>
+          <span class="stat-label">Tahun Berdiri</span>
+        </div>
+      </div>
+
+      <div class="tombol-row">        
+        <button class="tombol-masuk" onclick="location.href='dashboard.html'" aria-label="Masuk ke sistem paguyuban">
+          Masuk Paguyuban →
+        </button>
+      </div>
+    </div>
+
+    <div class="ornamen-bawah"></div>
+  </section>
+
+  <!-- ══ SEJARAH ══ -->
+  <section class="section-sejarah" id="sejarah">
+    <div class="sejarah-inner reveal">
+      <p class="section-label">Sejarah Kami</p>
+      <h2 class="section-judul">Perjalanan Panjang<br><em>Lintas Generasi</em></h2>
+      <div class="ornamen-tengah">
+        <div class="line"></div>
+        <div class="diamond" style="width:6px;height:6px;background:var(--emas);transform:rotate(45deg)"></div>
+        <div class="line r"></div>
+      </div>
+      <p class="sejarah-teks">
+        Sejak tahun 1981, para perantau dari Solo yang menetap di Jakarta bersepakat
+        untuk menjaga tali silaturahmi melalui sebuah paguyuban keluarga. Dari generasi
+        ke generasi, semangat kebersamaan itu tidak pernah padam.
+        Arisan menjadi salah satu pilar yang menguatkan — bukan sekadar soal uang,
+        melainkan tentang pertemuan, cerita, dan kehangatan keluarga besar
+        yang terus hidup dari satu generasi ke generasi berikutnya.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══ NILAI ══ -->
+  <section class="section-nilai">
+    <div style="text-align:center" class="reveal">
+      <p class="section-label">Nilai Kami</p>
+      <h2 class="section-judul">Pilar <em>Paguyuban</em></h2>
+      <div class="ornamen-tengah">
+        <div class="line"></div>
+        <div class="diamond" style="width:6px;height:6px;background:var(--emas);transform:rotate(45deg)"></div>
+        <div class="line r"></div>
+      </div>
+    </div>
+
+    <div class="nilai-grid">
+      <div class="nilai-card reveal">
+        <span class="nilai-icon">🤝</span>
+        <p class="nilai-judul">Silaturahmi</p>
+        <p class="nilai-desc">Menjaga hubungan antar keluarga lintas generasi, dari Solo hingga Jakarta dan seterusnya.</p>
+      </div>
+      <div class="nilai-card reveal">
+        <span class="nilai-icon">🏮</span>
+        <p class="nilai-judul">Gotong Royong</p>
+        <p class="nilai-desc">Saling mendukung dalam suka maupun duka, sebagaimana adat leluhur yang diwariskan.</p>
+      </div>
+      <div class="nilai-card reveal">
+        <span class="nilai-icon">🌱</span>
+        <p class="nilai-judul">Warisan Budaya</p>
+        <p class="nilai-desc">Melestarikan nilai-nilai luhur tanah Jawa sebagai identitas dan kebanggaan bersama.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ══ -->
+  <footer>
+    <p class="footer-nama">Paguyuban Keluarga Eyang Kromoredjo</p>
+      <p class="footer-tahun">- Berdiri 1981 · Jakarta -</p>
+    <p id="footer-generasi" style="font-size: 0.7rem; color: var(--coklat-terang); margin-top: 0.5rem; opacity: 0.8; letter-spacing: 1px;"></p>
+    <p style="font-size: 0.7rem; color: var(--coklat-terang); margin-top: 0.2rem; opacity: 0.8; letter-spacing: 1px;">• Juni 2026 •</p>
+  </footer>
+
+
+  <script type="module">
+    import { db } from './js/firebase-config.js';
+    import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
+    reveals.forEach(el => observer.observe(el));
+
+    // --- Logika Statistik Dinamis ---
+    // 1. Hitung Tahun Berjalan (Tahun Sekarang - 1981)
+    const tahunBerdiri = 1981;
+    const tahunSekarang = new Date().getFullYear();
+    document.getElementById('tahun-berjalan').textContent = tahunSekarang - tahunBerdiri;
+
+    // 2. Ambil Generasi Tertinggi dari Database secara Real-time
+    onValue(ref(db, "anggota"), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = Object.values(snapshot.val());
+        const maxGen = data.reduce((max, curr) => {
+          const gen = parseInt(curr.generasi) || 0;
+          return gen > max ? gen : max;
+        }, 0);
+        document.getElementById('jumlah-generasi').textContent = maxGen;
+        const footerEl = document.getElementById('footer-generasi');
+        if (footerEl) footerEl.textContent = maxGen;
+      }
+    });
+  </script>
+</body>
+</html>
