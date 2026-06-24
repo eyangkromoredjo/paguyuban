@@ -276,13 +276,14 @@
                 return;
             }
 
-            // Jika level adalah anggota, sembunyikan tombol aksi dan menu navigasi tambahan
+            // Atur visibilitas menu berdasarkan level pengguna
             if (user.level === 'anggota') {
+                // Sembunyikan tombol aksi cetak/copy untuk anggota
                 const containerAksi = document.getElementById('container-aksi-laporan');
                 if (containerAksi) containerAksi.style.display = 'none';
-                
-                // Sembunyikan tombol laporan detail yang bersifat internal/manajerial bagi anggota
-                const toHide = ['btn-iuran', 'btn-pengeluaran', 'btn-putaran', 'menu-iuran', 'menu-pengeluaran', 'menu-bukubesar'];
+
+                // Anggota hanya bisa melihat ringkasan, iuran, dan pengeluaran. Link ke Buku Besar (yang lebih detail dan ada aksi) disembunyikan.
+                const toHide = ['menu-bukubesar'];
                 toHide.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
@@ -291,21 +292,10 @@
 
             // Sinkronisasi Panel berdasarkan hash URL (Misal: laporan.html#iuran)
             const hash = window.location.hash.substring(1);
-            const sectionMap = { 
-                'overview': 'section-overview', 'iuran': 'section-iuran', 
-                'pengeluaran': 'section-pengeluaran', 
-                'putaran': 'section-putaran', 'menu': 'section-laporan-menu'
-            };
-
+            const sectionMap = { 'overview': 'section-overview', 'iuran': 'section-iuran', 'pengeluaran': 'section-pengeluaran', 'putaran': 'section-putaran', 'menu': 'section-laporan-menu' };
             if (hash && sectionMap[hash]) {
-                const restricted = ['iuran', 'pengeluaran', 'putaran'];
-                if (user.level !== 'anggota' || !restricted.includes(hash)) {
-                    history.replaceState({ section: sectionMap[hash] }, "", "#" + hash);
-                    window.showSection(sectionMap[hash], document.getElementById('menu-' + hash), false);
-                } else {
-                    history.replaceState({ section: 'section-laporan-menu' }, "", "#menu");
-                    window.showSection('section-laporan-menu', null, false);
-                }
+                history.replaceState({ section: sectionMap[hash] }, "", "#" + hash);
+                window.showSection(sectionMap[hash], document.getElementById('menu-' + hash), false);
             } else {
                 history.replaceState({ section: 'section-laporan-menu' }, "", "#menu");
                 window.showSection('section-laporan-menu', null, false);
@@ -633,12 +623,6 @@
         };
 
         window.showSection = function(id, el, pushState = true) {
-            const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
-            const restricted = ['section-iuran', 'section-pengeluaran', 'section-putaran'];
-            if (user && user.level === 'anggota' && restricted.includes(id)) {
-                return; // Hanya izinkan overview untuk anggota
-            }
-
             const subMap = {
                 'section-laporan-menu': 'Beranda Laporan',
                 'section-overview': 'Ringkasan Saldo',

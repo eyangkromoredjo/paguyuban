@@ -11,7 +11,9 @@ import { formatRp, toast, cleanNumber, applyMask } from './utils.js';
 // PERINGATAN KEAMANAN: Akun master dengan password yang di-hardcode di sisi klien sangat tidak aman.
 // Siapapun dapat melihatnya. Sebaiknya, kelola semua akun (termasuk admin) di dalam database Firebase
 // dan berikan mereka level 'admin' atau 'pengurus'.
-const AKUN_MASTER = []; // Dikosongkan untuk keamanan
+const AKUN_MASTER = [
+    { username: 'admin', password: 'kromoredjo1981', level: 'admin', nama: 'Administrator' }
+];
 
 
 
