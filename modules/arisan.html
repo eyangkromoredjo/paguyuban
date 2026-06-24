@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -399,7 +399,7 @@
                 <button class="btn-primary" onclick="saveWinner()">Simpan Data Penerima</button>
                 <div class="table-wrapper" style="margin-top:2rem;">
                     <table>
-                        <thead><tr><th>Bulan</th><th>Penerima</th><th>Lokasi Berikutnya</th><th style="text-align:center; width:110px;">Status</th></tr></thead>
+                        <thead><tr><th>Bulan</th><th>Penerima</th><th>Lokasi Berikutnya</th><th style="text-align:center; width:110px;">Status</th><th style="text-align:center;">Aksi</th></tr></thead>
                         <tbody id="winner-tbody"></tbody>
                     </table>
                 </div>
@@ -407,8 +407,11 @@
 
             <!-- PANEL SIKLUS -->
             <div class="panel" id="panel-siklus">
-                <h3>Status <em>Siklus Pemenang</em></h3>
-                <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom: 1.2rem;">
+                    <h3>Status <em>Siklus Pemenang</em></h3>
+                    <button id="btn-reset-siklus" class="btn-primary" style="background: var(--accent-red); display:none;" onclick="window.resetSiklusArisan()">🔄 Reset Siklus</button>
+                </div>
+                <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:1.5rem;">
                     <div class="stat-card">
                         <span class="stat-lbl">Sudah Dapat Arisan</span>
                         <div class="stat-num" id="val-cycle-done">0</div>
@@ -463,6 +466,13 @@ window.initArisanPage = async function() {
     if (!user) {
         window.location.href = '../dashboard.html';
         return;
+    }
+    window.penggunaLogin = user;
+
+    // Kontrol visibilitas tombol reset siklus
+    const btnResetSiklus = document.getElementById('btn-reset-siklus');
+    if (btnResetSiklus) {
+        btnResetSiklus.style.display = (user.level === 'admin' || user.level === 'pengurus') ? 'block' : 'none';
     }
 
     const isAnggota = user.level === 'anggota';
@@ -928,7 +938,6 @@ function renderPesertaTable() {
             const isNonPokok = tipe === 'non-pokok';
             return `
                 <tr class="${isNonPokok ? 'non-pokok-row' : ''}">
-                    <td><span class="member-name-cell">${m.nama}</span></td>
                     <td style="line-height:1.4; padding-top:10px; padding-bottom:10px;"><span class="member-name-cell">${displayName}</span></td>
                     <td>${tipeText}</td>
                     <td class="komponen-iuran-cell"><small style="opacity:0.8">${komponenText}</small></td>
@@ -993,23 +1002,21 @@ function renderJadwalTable() {
     const tbody = document.getElementById("winner-tbody");
     const badge = document.getElementById("badge-jumlah-jadwal");
     const badgeCard = document.getElementById("badge-jumlah-jadwal-card");
-    const selectedPeriode = getPeriodeFromSelectors('jadwal'); // Ambil periode yang dipilih
+    const isAdmin = window.penggunaLogin && window.penggunaLogin.level === 'admin';
 
     if (!tbody) return;
     const text = `${(window.storageArisan.jadwal || []).length} entri`;
     if (badge) badge.textContent = text;
     if (badgeCard) badgeCard.textContent = text;
 
-    if (!window.storageArisan.jadwal.length) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#8A7B6C; padding:18px;">Belum ada jadwal arisan tersimpan.</td></tr>';
+    const allJadwal = [...(window.storageArisan.jadwal || [])].sort((a, b) => b.periode.localeCompare(a.periode));
+
+    if (!allJadwal.length) {
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" style="text-align:center; color:#8A7B6C; padding:18px;">Belum ada jadwal arisan tersimpan.</td></tr>`;
         return;
     }
 
-    const filteredJadwal = window.storageArisan.jadwal.filter(item => {
-        return !selectedPeriode || item.periode === selectedPeriode;
-    });
-
-    tbody.innerHTML = filteredJadwal.map(item => {
+    tbody.innerHTML = allJadwal.map(item => {
         // Cek status bayar secara dinamis agar jika iuran diupdate, tabel ini ikut berubah
         let isPaid = false;
         const entriIuran = (window.storageArisan.iuran_bulanan || []).find(e => e.periode === item.periode);
@@ -1020,12 +1027,15 @@ function renderJadwalTable() {
         // Gunakan statusBayar dari item sebagai cadangan jika data iuran tidak ditemukan
         if (!entriIuran && item.statusBayar === 'sudah') isPaid = true;
 
+        const deleteButton = isAdmin ? `<button class="btn-sm danger" style="padding: 2px 8px; font-size: 0.8rem; border-radius: 4px;" onclick="window.hapusPenerima('${item.id}')">✕</button>` : '';
+
         return `
         <tr>
             <td>${item.periode}</td>
             <td><strong>${item.penerimaNama}</strong></td>
             <td>${item.rumah}${item.keterangan ? ' / ' + item.keterangan : ''}</td>
             <td style="text-align:center;"><span class="badge ${isPaid ? 'badge-lunas' : 'badge-belum'}">${isPaid ? 'Sudah Bayar' : 'Belum Bayar'}</span></td>
+            <td style="text-align:center;">${deleteButton}</td>
         </tr>`;
     }).join('');
 }
@@ -1088,6 +1098,58 @@ window.hapusPeriodeIuran = async function(periode) {
     window.storageArisan.iuran_bulanan = (window.storageArisan.iuran_bulanan || []).filter(e => e.periode !== periode);
     await set(ref(db, "arisan_global"), window.storageArisan);
     showToast(`Periode ${periode} berhasil dihapus.`, 'success', 1500);
+};
+
+window.hapusPenerima = async function(id) {
+    if (!window.penggunaLogin || window.penggunaLogin.level !== 'admin') {
+        return showToast("Hanya admin yang dapat menghapus data.", "error");
+    }
+
+    const jadwalItem = (window.storageArisan.jadwal || []).find(item => String(item.id) === String(id));
+    if (!jadwalItem) return showToast("Data penerima tidak ditemukan.", "error");
+
+    if (!confirm(`Anda yakin ingin menghapus data penerima arisan "${jadwalItem.penerimaNama}" untuk periode ${jadwalItem.periode}?`)) {
+        return;
+    }
+
+    // Filter out the item to be deleted
+    window.storageArisan.jadwal = (window.storageArisan.jadwal || []).filter(item => String(item.id) !== String(id));
+
+    // Save the updated data back to Firebase
+    try {
+        await set(ref(db, "arisan_global"), window.storageArisan);
+        showToast("Data penerima berhasil dihapus.", "success");
+    } catch (error) {
+        console.error("Gagal menghapus data penerima:", error);
+        showToast("Gagal menghapus data.", "error");
+    }
+};
+
+window.resetSiklusArisan = async function() {
+    if (!window.penggunaLogin || (window.penggunaLogin.level !== 'admin' && window.penggunaLogin.level !== 'pengurus')) {
+        return showToast("Hanya admin atau pengurus yang dapat mereset siklus.", "error");
+    }
+
+    const todoCount = parseInt(document.getElementById('val-cycle-todo')?.textContent || '1');
+    let confirmMessage = "Anda yakin ingin mereset siklus arisan? Ini akan menghapus daftar pemenang dan memulai putaran baru. Semua anggota 'Pokok' akan kembali masuk antrian.";
+
+    if (todoCount > 0) {
+        confirmMessage = `PERINGATAN: Masih ada ${todoCount} anggota yang belum dapat arisan. Apakah Anda tetap yakin ingin mereset siklus sekarang?`;
+    }
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    window.storageArisan.jadwal = [];
+
+    try {
+        await set(ref(db, "arisan_global"), window.storageArisan);
+        showToast("Siklus arisan berhasil direset. Putaran baru telah dimulai.", "success");
+    } catch (error) {
+        console.error("Gagal mereset siklus:", error);
+        showToast("Gagal mereset siklus arisan.", "error");
+    }
 };
 
 async function saveExpense() {

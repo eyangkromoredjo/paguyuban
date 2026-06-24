@@ -528,7 +528,9 @@
             // Ambil data pengeluaran dari Buku Besar (transaksi)
             const data = window.dataMaster.transaksi.filter(t => t.tipe === 'keluar');
             if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada pengeluaran</td></tr>'; return; }
-            
+
+            data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
             tbody.innerHTML = data.map(t => `<tr>
                 <td>${t.tanggal.split('-').reverse().join('/')}</td>
                 <td style="font-family:'Cinzel'">${t.kategori}</td>

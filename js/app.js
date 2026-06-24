@@ -1884,7 +1884,7 @@ window.renderBaganPengurus = async function() {
 
   if (inti.length > 0) {
 
-    html += renderGroup('Struktur Intil', inti, 'org-level-inti');
+    html += renderGroup('Struktur Inti', inti, 'org-level-inti');
 
   }
 
