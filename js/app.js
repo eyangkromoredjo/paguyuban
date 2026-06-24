@@ -2865,15 +2865,10 @@ window.addEventListener('load', () => {
 
 
       // Sinkronisasi Panel berdasarkan hash URL (Contoh: #anggota)
-
       if (hash) {
-
-      const panelMap = { 'anggota': 'anggota', 'logs': 'logs', 'dashboard': 'dashboard' };
-
+      const panelMap = { 'anggota': 'anggota', 'logs': 'logs', 'dashboard': 'dashboard', 'buku-besar': 'buku-besar' };
       if (panelMap[hash]) {
-
         // Cari elemen navigasi terkait untuk memberikan class 'aktif'
-
         const navItems = document.querySelectorAll('.nav-item');
 
         let targetNav = null;
@@ -3342,4 +3337,226 @@ window.gantiPasswordDariLogin = async function() {
     sessionStorage.removeItem('kromoredjo_user');
     setTimeout(() => location.reload(), 500);
   }
+};
+
+// =================================================================
+// FUNGSI BUKU BESAR (PINDAHAN DARI BUKUBESAR.JS)
+// =================================================================
+window.prosesUploadBukti = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      const max = 800;
+      if (width > height && width > max) { height *= max / width; width = max; }
+      else if (height > max) { width *= max / height; height = max; }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('trx-foto').value = dataUrl;
+      const btnHapus = document.getElementById('btn-hapus-foto');
+      if(btnHapus) btnHapus.style.display = 'block';
+      toast("Bukti berhasil diproses.");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.hapusFotoBukti = function() {
+  document.getElementById('trx-foto').value = '';
+  document.getElementById('input-bukti-foto').value = '';
+  const btnHapus = document.getElementById('btn-hapus-foto');
+  if(btnHapus) btnHapus.style.display = 'none';
+  toast("Foto bukti dihapus.");
+};
+
+window.lihatBukti = async function(id) {
+  const snapshot = await get(ref(db, `transaksi/${id}`));
+  if (snapshot.exists() && snapshot.val().foto) {
+    document.getElementById('img-bukti-view').src = snapshot.val().foto;
+    window.bukaModal('modal-lihat-bukti');
+  } else {
+    toast("Bukti tidak ditemukan.");
+  }
+};
+
+window.hapusSemuaTransaksi = async function() {
+  if (!HAK_AKSES[penggunaLogin.level]?.hapus) return toast('Hanya Admin yang dapat menghapus seluruh data.');
+  document.getElementById('input-password-ledger').value = '';
+  window.bukaModal('modal-otorisasi-ledger');
+  setTimeout(() => document.getElementById('input-password-ledger').focus(), 100);
+};
+
+window.konfirmasiBersihkanLedger = async function() {
+  const pw = document.getElementById('input-password-ledger').value;
+  if (pw !== 'bnLm9ufo') { // Ganti dengan password yang lebih aman jika perlu
+    toast('Kata sandi salah.');
+    return;
+  }
+  window.tutupModal('modal-otorisasi-ledger');
+  try {
+    await remove(ref(db, "transaksi"));
+    toast('Buku Besar berhasil dibersihkan.');
+    catatLog("Bersihkan Buku Besar", "Menghapus seluruh data transaksi keuangan");
+    window.renderBukuBesar();
+  } catch (e) {
+    console.error(e);
+    toast('Gagal membersihkan data.');
+  }
+};
+
+window.importLedgerFile = function() {
+  if(!penggunaLogin) return toast('Silakan masuk terlebih dahulu sebelum mengimpor data.');
+  document.getElementById('input-import-excel').click();
+};
+
+window.handleImportLedgerFile = async function(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const result = await parseLedgerRows(rows);
+      if(result.count === 0) return toast('Tidak ditemukan baris transaksi valid pada file.');
+      await Promise.all(result.entries.map(async trx => {
+        const newTrxRef = push(ref(db, "transaksi"));
+        await set(newTrxRef, trx);
+      }));
+      catatLog("Import Keuangan", "Berhasil mengimpor " + result.count + " transaksi dari file");
+      toast(result.count + ' transaksi berhasil diimpor ke buku besar.');
+      window.renderBukuBesar();
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengimpor file. Pastikan format Excel atau CSV benar.');
+    } finally {
+      input.value = '';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+async function parseLedgerRows(rows) {
+  if(!rows || rows.length < 2) return { count: 0, entries: [] };
+  const header = rows[0].map(h => (h || '').toString().trim().toLowerCase());
+  const idx = {
+    tanggal: header.findIndex(h => /tanggal|date|tgl/.test(h)),
+    deskripsi: header.findIndex(h => /keterangan|description|uraian|detail|transaksi/.test(h)),
+    kategori: header.findIndex(h => /kategori|category|jenis|tipe/.test(h)),
+    masuk: header.findIndex(h => /masuk|debit|penerimaan|penerima|income/.test(h)),
+    keluar: header.findIndex(h => /keluar|kredit|pengeluaran|bayar|expense/.test(h)),
+    jumlah: header.findIndex(h => /jumlah|nominal|amount/.test(h))
+  };
+  const entries = [];
+  function parseNumber(value) {
+    if(value === null || value === undefined || value === '') return NaN;
+    if(typeof value === 'string') value = value.replace(/[^0-9\-,.]/g, '').replace(/\./g, '').replace(/,/g, '.');
+    return Number(value);
+  }
+  function parseDate(value) {
+    if(!value && value !== 0) return null;
+    if(value instanceof Date) return value;
+    if(typeof value === 'number') {
+      const dateCode = XLSX.SSF.parse_date_code(value);
+      if(dateCode) return new Date(Date.UTC(dateCode.y, dateCode.m - 1, dateCode.d, dateCode.H, dateCode.M, dateCode.S));
+      return null;
+    }
+    const d = new Date(value.toString().trim());
+    if(!isNaN(d)) return d;
+    const parts = value.toString().trim().split(/[\.\/\-]/).map(p => parseInt(p, 10));
+    if(parts.length >= 3) {
+      if(parts[0] > 31) return new Date(parts[0], parts[1]-1, parts[2]);
+      return new Date(parts[2], parts[1]-1, parts[0]);
+    }
+    return null;
+  }
+  function formatIso(date) {
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  }
+  for(let i=1;i<rows.length;i++) {
+    const row = rows[i];
+    if(!row || row.length === 0) continue;
+    const tanggal = idx.tanggal >= 0 ? row[idx.tanggal] : null;
+    const deskripsi = idx.deskripsi >= 0 ? row[idx.deskripsi] : row[idx.kategori] || '';
+    const kategori = idx.kategori >= 0 ? row[idx.kategori] : 'Lain-lain';
+    const masuk = parseNumber(idx.masuk >= 0 ? row[idx.masuk] : NaN);
+    const keluar = parseNumber(idx.keluar >= 0 ? row[idx.keluar] : NaN);
+    const jumlah = parseNumber(idx.jumlah >= 0 ? row[idx.jumlah] : NaN);
+    let tipe = 'masuk', nilai = NaN;
+    if(!isNaN(masuk) && masuk > 0) { nilai = masuk; tipe = 'masuk'; }
+    if(!isNaN(keluar) && keluar > 0) { nilai = keluar; tipe = 'keluar'; }
+    if(isNaN(nilai) && !isNaN(jumlah)) { nilai = Math.abs(jumlah); tipe = jumlah < 0 ? 'keluar' : 'masuk'; }
+    if(isNaN(nilai) || !deskripsi) continue;
+    const parsedDate = parseDate(tanggal);
+    if(!parsedDate) continue;
+    entries.push({
+      tanggal: formatIso(parsedDate),
+      deskripsi: deskripsi.toString().trim(),
+      kategori: kategori ? kategori.toString().trim() : 'Umum',
+      jumlah: Math.round(nilai),
+      tipe,
+      inputOleh: penggunaLogin.nama,
+      createdAt: Date.now()
+    });
+  }
+  return { count: entries.length, entries };
+}
+
+function populateLedgerFilters() {
+    const monthNames = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const years = [];
+    for (let y = 2021; y <= currentYear + 10; y++) years.push(y);
+
+    ['mulai', 'sampai'].forEach(prefix => {
+        const mEl = document.getElementById(`filter-${prefix}-bulan`);
+        const yEl = document.getElementById(`filter-${prefix}-tahun`);
+        if (!mEl || !yEl) return;
+        mEl.innerHTML = '<option value="">-Bulan-</option>' + monthNames.map((num, idx) => `<option value="${String(idx+1).padStart(2,'0')}">${num}</option>`).join('');
+        yEl.innerHTML = '<option value="">-Tahun-</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+    });
+    document.getElementById('filter-mulai-bulan').value = '01';
+    document.getElementById('filter-sampai-bulan').value = String(now.getMonth() + 1).padStart(2, '0');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    populateLedgerFilters();
+});
+
+window.hapusTransaksi = async function(id) {
+  if (!confirm('Hapus transaksi ini?')) return;
+  await remove(ref(db, `transaksi/${id}`));
+  toast('Transaksi dihapus.');
+  catatLog("Hapus Keuangan", "ID Transaksi: " + id);
+  window.renderBukuBesar();
+};
+
+window.bukaEditTransaksi = async function(id) {
+  const snapshot = await get(ref(db, `transaksi/${id}`));
+  if (!snapshot.exists()) return;
+  const t = snapshot.val();
+  document.getElementById('trx-id').value = id;
+  document.getElementById('trx-tanggal').value = t.tanggal;
+  document.getElementById('trx-deskripsi').value = t.deskripsi;
+  document.getElementById('trx-jumlah').value = t.jumlah ? t.jumlah.toLocaleString('id-ID') : '';
+  document.getElementById('trx-foto').value = t.foto || '';
+  const btnHapus = document.getElementById('btn-hapus-foto');
+  if(btnHapus) btnHapus.style.display = t.foto ? 'block' : 'none';
+  document.getElementById('trx-kategori').value = t.kategori;
+  const radio = document.querySelector(`input[name="trx-tipe"][value="${t.tipe}"]`);
+  if(radio) radio.checked = true;
+  document.getElementById('modal-trx-judul').textContent = 'Edit Transaksi';
+  window.bukaModal('modal-transaksi');
 };

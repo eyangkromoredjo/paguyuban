@@ -38,7 +38,8 @@
         .btn-wa:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 
         /* Form Controls Sync */
-        .form-control { width: 100%; padding: .8rem 1rem; background: #f0f2f5; border: 1px solid #212529; color: #212529; border-radius: 12px; font-family: 'Inter', sans-serif; }
+        /* Override global form styles for light panels in this module */
+        .panel .form-control { width: 100%; padding: .8rem 1rem; background: #f0f2f5; border: 1px solid #212529; color: #212529; border-radius: 12px; font-family: 'Inter', sans-serif; }
         .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,84,166,0.1); }
 
         /* FIX: Label color on light panel background */
@@ -135,7 +136,7 @@
                             <div class="service-icon" style="background:linear-gradient(135deg,#E53935,#ff8a80)">📉</div>
                             <span class="service-label">Buku Pengeluaran</span>
                         </div>
-                        <div class="service-item" id="menu-bukubesar" onclick="location.href='../bukubesar.html'">
+                        <div class="service-item" id="menu-bukubesar" onclick="location.href='../dashboard.html#buku-besar'">
                             <div class="service-icon" style="background:linear-gradient(135deg,#4A148C,#AB47BC)">📖</div>
                             <span class="service-label">Buku Besar</span>
                         </div>
@@ -226,6 +227,16 @@
             <div id="section-pengeluaran" class="report-section" style="display:none">
                 <div class="panel">
                     <h3>Buku Besar <em>Pengeluaran Sosial</em></h3>
+                    <div class="filter-section" style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label>Periode Mulai</label>
+                            <select id="filter-pengeluaran-start" class="form-control" onchange="window.renderPengeluaranReport()"></select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label>Sampai (Opsional)</label>
+                            <select id="filter-pengeluaran-end" class="form-control" onchange="window.renderPengeluaranReport()"></select>
+                        </div>
+                    </div>
                     <div class="table-wrapper">
                         <table>
                             <thead>
@@ -237,6 +248,12 @@
                                 </tr>
                             </thead>
                             <tbody id="body-report-pengeluaran"></tbody>
+                            <tfoot style="background: rgba(0,0,0,0.3); font-weight: bold; border-top: 2px solid var(--accent-red);">
+                                <tr>
+                                    <td colspan="3" style="padding: 1rem 0.8rem;">TOTAL PENGELUARAN</td>
+                                    <td id="foot-total-pengeluaran" class="text-right" style="color: #c62828; font-weight: 700;">- Rp 0</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -335,6 +352,7 @@
             if (window.dataMaster.anggota.length > 0) {
                 renderOverview();
                 populatePeriodeFilter();
+                populateExpensePeriodFilter();
                 renderIuranReport();
                 renderPengeluaranReport();
                 renderPutaranReport();
@@ -381,6 +399,26 @@
             const html = displayPeriods.map(p => `<option value="${p}">${p}</option>`).join('');
             startSelect.innerHTML = html;
             endSelect.innerHTML = '<option value="">Hanya Satu Pertemuan</option>' + html;
+        }
+
+        function populateExpensePeriodFilter() {
+            const startSelectEx = document.getElementById('filter-pengeluaran-start');
+            const endSelectEx = document.getElementById('filter-pengeluaran-end');
+            if (startSelectEx && endSelectEx) {
+                const expensePeriods = [...new Set(window.dataMaster.transaksi
+                    .filter(t => t.tipe === 'keluar')
+                    .map(t => t.tanggal.substring(0, 7)) // Get YYYY-MM
+                )].sort().reverse(); // Newest first
+
+                if (expensePeriods.length === 0) {
+                    startSelectEx.innerHTML = '<option value="">Belum ada data</option>';
+                    endSelectEx.innerHTML = '<option value="">-</option>';
+                } else {
+                    const html = expensePeriods.map(p => `<option value="${p}">${p}</option>`).join('');
+                    startSelectEx.innerHTML = html;
+                    endSelectEx.innerHTML = '<option value="">Hanya Satu Bulan</option>' + html;
+                }
+            }
         }
 
         window.renderIuranReport = function() {
@@ -529,20 +567,51 @@
             document.getElementById('row-putaran-saldo').textContent = formatRp((tSosialMasuk - tKeluarSosial) + tTabunganMasuk + (tPokokMasuk - tPokokKeluar));
         }
 
-        function renderPengeluaranReport() {
+        window.renderPengeluaranReport = function() {
             const tbody = document.getElementById('body-report-pengeluaran');
-            // Ambil data pengeluaran dari Buku Besar (transaksi)
-            const data = window.dataMaster.transaksi.filter(t => t.tipe === 'keluar');
-            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada pengeluaran</td></tr>'; return; }
+            const tfoot = document.getElementById('foot-total-pengeluaran');
+            if (!tbody || !tfoot) return;
 
-            data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+            const startP = document.getElementById('filter-pengeluaran-start')?.value;
+            const endP = document.getElementById('filter-pengeluaran-end')?.value;
 
-            tbody.innerHTML = data.map(t => `<tr>
-                <td>${t.tanggal.split('-').reverse().join('/')}</td>
-                <td style="font-family:'Cinzel'">${t.kategori}</td>
-                <td>${t.deskripsi}</td>
-                <td class="text-right" style="color:#e8a0a0; font-weight:600">-${formatRp(t.jumlah)}</td>
-            </tr>`).join('');
+            let allExpenses = window.dataMaster.transaksi.filter(t => t.tipe === 'keluar');
+
+            // Filter logic
+            let filteredData = [];
+            if (!startP) {
+                filteredData = allExpenses;
+            } else if (!endP || startP === endP) {
+                filteredData = allExpenses.filter(t => t.tanggal.startsWith(startP));
+            } else {
+                const minP = startP < endP ? startP : endP;
+                const maxP = startP < endP ? endP : startP;
+                filteredData = allExpenses.filter(t => {
+                    const period = t.tanggal.substring(0, 7);
+                    return period >= minP && period <= maxP;
+                });
+            }
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada pengeluaran pada periode ini</td></tr>';
+                tfoot.textContent = `- ${formatRp(0)}`;
+                return;
+            }
+
+            filteredData.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            let totalPengeluaran = 0;
+            tbody.innerHTML = filteredData.map(t => {
+                totalPengeluaran += (parseInt(t.jumlah) || 0);
+                return `<tr>
+                    <td>${t.tanggal.split('-').reverse().join('/')}</td>
+                    <td style="font-family:'Cinzel'">${t.kategori}</td>
+                    <td>${t.deskripsi}</td>
+                    <td class="text-right" style="color:#c62828; font-weight:600">-${formatRp(t.jumlah)}</td>
+                </tr>`;
+            }).join('');
+
+            tfoot.textContent = `- ${formatRp(totalPengeluaran)}`;
         }
 
         window.toggleLaporanSubmenu = function() {

@@ -432,6 +432,50 @@
       </div>
     </div>
 
+    <!-- BUKU BESAR (LEDGER) -->
+    <div class="panel" id="panel-buku-besar">
+      <div class="panel-header" style="flex-wrap:wrap; gap:1rem;">
+        <h2 class="panel-judul">Buku Besar <em>Keuangan</em></h2>
+        <div class="panel-actions" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button class="btn-tambah" onclick="window.resetTrxForm(); window.bukaModal('modal-transaksi');">+ Tambah Manual</button>
+          <button class="btn-sm" onclick="window.importLedgerFile()">Import Excel</button>
+          <input type="file" id="input-import-excel" accept=".xlsx, .xls, .csv" style="display:none" onchange="window.handleImportLedgerFile(this)">
+          <button class="btn-sm danger" id="btn-bersihkan-ledger" onclick="window.hapusSemuaTransaksi()">Bersihkan Ledger</button>
+        </div>
+      </div>
+      <div class="filter-bar" style="flex-wrap:wrap;">
+        <input type="text" class="search-box" id="search-ledger" placeholder="🔍 Cari uraian/kategori..." oninput="window.renderBukuBesar()"/>
+        <div style="display:flex; gap:5px; align-items:center; flex-wrap: wrap;">
+          <select id="filter-mulai-bulan" class="form-control-small" onchange="window.renderBukuBesar()"></select>
+          <select id="filter-mulai-tahun" class="form-control-small" onchange="window.renderBukuBesar()"></select>
+          <span style="color:var(--cb);">-</span>
+          <select id="filter-sampai-bulan" class="form-control-small" onchange="window.renderBukuBesar()"></select>
+          <select id="filter-sampai-tahun" class="form-control-small" onchange="window.renderBukuBesar()"></select>
+          <button class="btn-sm" onclick="window.resetFilterBukuBesar()" style="padding:0.5rem 0.8rem;">Reset</button>
+        </div>
+      </div>
+      <div class="table-wrapper" style="margin-top:1.5rem;">
+        <table class="tabel-bayar">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Uraian</th>
+              <th style="text-align:center;">Bukti</th>
+              <th>Kategori</th>
+              <th style="text-align:right;">Masuk</th>
+              <th style="text-align:right;">Keluar</th>
+              <th style="text-align:center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-body"></tbody>
+          <tfoot>
+            <tr><td colspan="4">TOTAL</td><td id="ledger-total-masuk" style="text-align:right; font-weight:bold; color:#2e7d32;"></td><td id="ledger-total-keluar" style="text-align:right; font-weight:bold; color:#c62828;"></td><td></td></tr>
+            <tr><td colspan="4" style="font-weight:bold; font-size:1rem;">SALDO AKHIR</td><td id="ledger-saldo-akhir" colspan="3" style="text-align:right; font-weight:bold; font-size:1.2rem;"></td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -667,6 +711,7 @@
     <div class="modal-body">
       <form class="modal-form" onsubmit="return false">
         <input type="hidden" id="trx-id">
+        <input type="hidden" id="trx-foto">
         <div class="form-group">
           <label>Tanggal</label>
           <input type="date" id="trx-tanggal" required/>
@@ -701,6 +746,14 @@
         <div class="form-group">
           <label>Jumlah (Rp)</label>
           <input type="text" id="trx-jumlah" placeholder="0" inputmode="numeric" required/>
+        </div>
+        <div class="form-group">
+          <label>Bukti Foto (Opsional)</label>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-sm solid" onclick="document.getElementById('input-bukti-foto').click()" style="flex:1; padding:0 1rem; height:48px; background:var(--em); color:var(--ct); border:none; font-family:'Cinzel'; font-weight:800; font-size:0.7rem; cursor:pointer;">📸 Ambil/Pilih Foto</button>
+            <button type="button" id="btn-hapus-foto" class="btn-sm danger" onclick="window.hapusFotoBukti()" style="display:none;">Hapus</button>
+          </div>
+          <input type="file" id="input-bukti-foto" accept="image/*" style="display:none" onchange="window.prosesUploadBukti(this)">
         </div>
       </form>
     </div>
@@ -773,6 +826,40 @@
     <div class="modal-footer">
       <button class="btn-batal" onclick="window.tutupModal('modal-hapus')">Batal</button>
       <button class="btn-hapus-ok" onclick="window.konfirmasiHapus()">Ya, Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LIHAT BUKTI -->
+<div class="modal-overlay" id="modal-lihat-bukti">
+  <div class="modal-box" style="max-width:500px; padding:0.5rem;">
+    <div class="modal-header" style="padding:0.5rem 1rem;">
+      <p class="modal-judul">Bukti Transaksi</p>
+      <button class="modal-tutup" onclick="window.tutupModal('modal-lihat-bukti')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <img id="img-bukti-view" src="" style="width:100%; height:auto; display:block; border-radius: 0 0 12px 12px;">
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OTORISASI LEDGER -->
+<div class="modal-overlay" id="modal-otorisasi-ledger">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <p class="modal-judul">Otorisasi Admin</p>
+      <button class="modal-tutup" onclick="window.tutupModal('modal-otorisasi-ledger')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="konfirm-teks" style="margin-bottom:1rem">PERINGATAN: Ini akan menghapus SELURUH riwayat transaksi di Buku Besar.<br>Masukkan kata sandi otorisasi:</p>
+      <div class="password-wrapper">
+        <input type="password" id="input-password-ledger" class="search-box" style="width:100%; background:rgba(0,0,0,0.2); border-color:var(--em); color:white; padding:0.8rem" placeholder="Kata sandi..." onkeydown="if(event.key==='Enter') window.konfirmasiBersihkanLedger()">
+        <button type="button" class="toggle-password" onclick="window.togglePasswordVisibility('input-password-ledger', this)"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-batal" onclick="window.tutupModal('modal-otorisasi-ledger')">Batal</button>
+      <button class="btn-hapus-ok" onclick="window.konfirmasiBersihkanLedger()">Konfirmasi</button>
     </div>
   </div>
 </div>
