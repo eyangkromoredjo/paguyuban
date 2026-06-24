@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -264,7 +264,7 @@
                 </div>
 
                 <div class="table-wrapper">
-                    <table>
+                    <table style="min-width: 500px;">
                         <thead>
                             <tr><th>Nama Anggota</th><th>Tipe</th><th>Komponen Iuran</th><th style="text-align:right;">Wajib Bayar</th></tr>
                         </thead>
@@ -287,7 +287,7 @@
                     <input type="text" id="search-pay" class="form-control" placeholder="Ketik nama anggota..." oninput="window.renderPayChecklist()">
                 </div>
                 <div class="table-wrapper">
-                    <table>
+                    <table style="min-width: 520px;">
                         <thead>
                             <tr>
                                 <th>Nama</th>
@@ -370,8 +370,8 @@
                 </div>
                 <button class="btn-primary" onclick="saveExpense()">Simpan Pengeluaran</button>
                 <div class="table-wrapper" style="margin-top:2rem;">
-                    <table>
-                        <thead><tr><th>Tanggal</th><th>Jenis</th><th>Uraian</th><th style="text-align:right;">Nominal</th></tr></thead>
+                    <table style="min-width: 500px;">
+                        <thead><tr><th>Tanggal</th><th>Jenis</th><th>Uraian</th><th style="text-align:right;">Nominal</th><th style="text-align:center;">Aksi</th></tr></thead>
                         <tbody id="exp-tbody"></tbody>
                     </table>
                 </div>
@@ -398,7 +398,7 @@
                 </div>
                 <button class="btn-primary" onclick="saveWinner()">Simpan Data Penerima</button>
                 <div class="table-wrapper" style="margin-top:2rem;">
-                    <table>
+                    <table style="min-width: 500px;">
                         <thead><tr><th>Bulan</th><th>Penerima</th><th>Lokasi Berikutnya</th><th style="text-align:center; width:110px;">Status</th><th style="text-align:center;">Aksi</th></tr></thead>
                         <tbody id="winner-tbody"></tbody>
                     </table>
@@ -1152,6 +1152,28 @@ window.resetSiklusArisan = async function() {
     }
 };
 
+window.hapusPengeluaranArisan = async function(id) {
+    if (!window.penggunaLogin || (window.penggunaLogin.level !== 'admin' && window.penggunaLogin.level !== 'pengurus')) {
+        return showToast("Anda tidak memiliki hak untuk menghapus.", "error");
+    }
+
+    const trx = (window.ledgerTransactions || []).find(t => t.id === id);
+    if (!trx) return showToast("Transaksi tidak ditemukan.", "error");
+
+    if (!confirm(`Anda yakin ingin menghapus pengeluaran "${trx.deskripsi}"?`)) {
+        return;
+    }
+
+    try {
+        await remove(ref(db, `transaksi/${id}`));
+        showToast("Pengeluaran berhasil dihapus dari buku besar.", "success");
+        // Listener onValue akan otomatis me-render ulang tabel
+    } catch (error) {
+        console.error("Gagal menghapus pengeluaran:", error);
+        showToast("Gagal menghapus data.", "error");
+    }
+};
+
 async function saveExpense() {
     const id = document.getElementById('exp-id').value;
     const periode = getPeriodeFromSelectors('exp');
@@ -1222,6 +1244,8 @@ function renderExpenseTable() {
     if (!tbody) return;
 
     const selectedPeriode = getPeriodeFromSelectors('exp');
+    const user = window.penggunaLogin;
+    const canDelete = user && (user.level === 'admin' || user.level === 'pengurus');
 
     // Ambil data dari window.ledgerTransactions yang sudah di-sync secara global
     const filteredExpenses = (window.ledgerTransactions || []).filter(item => {
@@ -1233,19 +1257,23 @@ function renderExpenseTable() {
     });
 
     if (!filteredExpenses.length) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-light); padding:18px;">Belum ada data pengeluaran sosial di Buku Besar.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${canDelete ? 5 : 4}" style="text-align:center; color:var(--text-light); padding:18px;">Belum ada data pengeluaran sosial di Buku Besar.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = filteredExpenses
         .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
-        .map(item => `
-        <tr onclick="window.editExpense('${item.id}')" style="cursor:pointer" title="Klik untuk edit">
-            <td>${item.tanggal.split('-').reverse().join('/')}</td>
-            <td>${item.kategori}</td>
-            <td>${item.deskripsi}</td>
-            <td style="text-align:right; font-weight:600; color:#c62828;">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.jumlah)}</td>
-        </tr>`).join('');
+        .map(item => {
+            const deleteButton = canDelete ? `<button class="btn-sm danger" style="padding: 2px 8px; font-size: 0.8rem; border-radius: 4px;" onclick="event.stopPropagation(); window.hapusPengeluaranArisan('${item.id}')">✕</button>` : '';
+            return `
+            <tr onclick="window.editExpense('${item.id}')" style="cursor:pointer" title="Klik untuk edit">
+                <td>${item.tanggal.split('-').reverse().join('/')}</td>
+                <td>${item.kategori}</td>
+                <td>${item.deskripsi}</td>
+                <td style="text-align:right; font-weight:600; color:#c62828;">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.jumlah)}</td>
+                <td style="text-align:center;">${deleteButton}</td>
+            </tr>`;
+        }).join('');
 }
 window.renderExpenseTable = renderExpenseTable;
 
@@ -1421,8 +1449,13 @@ function populatePeriodeSelectors() {
         yEl.innerHTML = '<option value="">-tahun-</option>';
         years.forEach(y => { const opt = document.createElement('option'); opt.value = String(y); opt.textContent = String(y); yEl.appendChild(opt); });
 
-        mEl.value = String(now.getMonth() + 1).padStart(2, '0');
-        yEl.value = String(currentYear);
+        if (prefix === 'exp') {
+            mEl.value = ''; // Default ke "-bulan-"
+            yEl.value = ''; // Default ke "-tahun-"
+        } else {
+            mEl.value = String(now.getMonth() + 1).padStart(2, '0');
+            yEl.value = String(currentYear);
+        }
     });
 
     // initial render

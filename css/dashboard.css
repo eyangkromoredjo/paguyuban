@@ -142,7 +142,7 @@ body {
 }
 .form-group input::placeholder,
 .form-group textarea::placeholder { color: rgba(255,255,255,.3); }
-select option { background: var(--primary-dark); color: #fff; }
+.select option { background: var(--primary-dark); color: #fff; }
 select.search-box { background-color: var(--primary-dark); color: #fff; }
 .form-group textarea { resize: vertical; min-height: 70px; }
 
