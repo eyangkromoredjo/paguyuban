@@ -99,6 +99,58 @@
     .gen-btn:hover { background: var(--primary-light); }
     .gen-btn.active { background: var(--primary); color: white; }
 
+    /* GARIS LINTAS GENERASI */
+    .link-lintas-gen {
+      fill: none;
+      stroke: #e07b39;
+      stroke-width: 2px;
+      stroke-dasharray: 7 4;
+      opacity: 0.9;
+      animation: dashMove 1.8s linear infinite;
+    }
+    @keyframes dashMove { to { stroke-dashoffset: -22; } }
+
+    .label-lintas-gen {
+      font-size: 10px;
+      fill: #e07b39;
+      font-weight: bold;
+      pointer-events: none;
+      user-select: none;
+    }
+    .label-lintas-gen-bg {
+      fill: var(--bg-card);
+      stroke: #e07b39;
+      stroke-width: 0.8px;
+      rx: 3px;
+    }
+
+    /* Badge lintas gen di dalam node */
+    .badge-lintas-bg { fill: rgba(224,123,57,0.12); stroke: #e07b39; stroke-width: 0.8px; }
+    .badge-lintas { font-size: 9px; fill: #e07b39; font-weight: bold; pointer-events: none; }
+
+    /* LEGENDA */
+    .legenda {
+      position: absolute;
+      bottom: 1.2rem;
+      left: 1.2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: var(--text-mid);
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      box-shadow: var(--shadow-sm);
+    }
+    .legenda-item { display: flex; align-items: center; gap: 7px; }
+    .legenda-garis {
+      width: 28px; height: 3px; border-radius: 2px;
+      display: inline-block; flex-shrink: 0;
+    }
+
     /* SILSILAH INTERAKTIF STYLES */
   </style>
   <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -120,7 +172,26 @@
     </div>
 
     <div class="silsilah-container">
-      <svg id="tree-svg"></svg>
+      <svg id="tree-svg">
+        <defs>
+          <marker id="arrow-lintas" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#e07b39"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="legenda">
+        <div class="legenda-item">
+          <span class="legenda-garis" style="background:var(--primary);opacity:0.4;"></span>
+          Garis keturunan
+        </div>
+        <div class="legenda-item">
+          <span class="legenda-garis" style="background:#e07b39;"></span>
+          💍 Nikah lintas generasi
+        </div>
+        <div class="legenda-item">🪦 Wafat &nbsp;&nbsp; 💰 Lunas arisan</div>
+      </div>
       <div class="gen-filter" id="gen-filter-container">
         <button class="gen-btn active" data-gen="all">Semua</button>
       </div>
@@ -211,6 +282,21 @@
 
   function initD3(data, arisanData) {
     const lunasIds = arisanData ? arisanData.filter(p => p.lunas).map(p => p.id) : [];
+
+    // Kumpulkan pasangan lintas generasi (nikahLintasGen: true, idPasanganLintasGen: "xxx")
+    // Simpan sebagai pasangan unik agar tidak digambar dua kali
+    window._lintasGenPairs = [];
+    const _lintasKeys = new Set();
+    data.forEach(a => {
+      if (a.nikahLintasGen && a.idPasanganLintasGen) {
+        const pair = [String(a.id), String(a.idPasanganLintasGen)].sort();
+        const key = pair.join('|');
+        if (!_lintasKeys.has(key)) {
+          _lintasKeys.add(key);
+          window._lintasGenPairs.push({ key, id1: pair[0], id2: pair[1] });
+        }
+      }
+    });
     const spouseMap = {};
     data.forEach(a => { 
       const sid = a.spouseId || a.idPasangan;
@@ -362,6 +448,15 @@
       if (d.data.isLunas) {
         d3.select(this).append("text").attr("class", "arisan-icon").attr("x", nodeW/2 - 15).attr("y", -nodeH/2 + 15).text("💰");
       }
+      // Badge lintas generasi
+      if (d.data.nikahLintasGen) {
+        d3.select(this).append("rect").attr("class", "badge-lintas-bg")
+          .attr("x", -nodeW/2 + 4).attr("y", -nodeH/2 - 16)
+          .attr("width", 78).attr("height", 14).attr("rx", 3);
+        d3.select(this).append("text").attr("class", "badge-lintas")
+          .attr("x", -nodeW/2 + 8).attr("y", -nodeH/2 - 5)
+          .text("⚠ lintas generasi");
+      }
       if (d.children || d._children) {
         d3.select(this).append("circle").attr("class", "collapse-btn").attr("r", 7).attr("cy", nodeH/2);
         d3.select(this).append("text").attr("class", "collapse-text").attr("text-anchor", "middle").attr("y", nodeH/2 + 3)
@@ -391,6 +486,40 @@
     }).remove();
 
     nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+
+    // Panggil render garis lintas gen setelah posisi node diketahui
+    renderLintasGen(nodes);
+  }
+
+  // ── RENDER GARIS LINTAS GENERASI ──
+  // Fungsi terpisah agar garis di-insert SEBELUM node (di belakang kotak)
+  function renderLintasGen(nodes) {
+    gContainer.selectAll("path.link-lintas-gen").remove();
+
+    const posMap = {};
+    nodes.forEach(d => { posMap[String(d.data.id)] = { x: d.x, y: d.y }; });
+
+    (window._lintasGenPairs || []).forEach(pair => {
+      const pos1 = posMap[pair.id1];
+      const pos2 = posMap[pair.id2];
+      if (!pos1 || !pos2) return;
+
+      const [from, to] = pos1.y <= pos2.y ? [pos1, pos2] : [pos2, pos1];
+      const curveX = Math.max(from.x, to.x) + nodeW + 60;
+
+      const pathD = [
+        `M ${from.x + nodeW/2},${from.y}`,
+        `C ${curveX},${from.y}`,
+        `  ${curveX},${to.y}`,
+        `  ${to.x + nodeW/2},${to.y}`
+      ].join(' ');
+
+      // insert sebelum node pertama = tampil di belakang semua kotak
+      gContainer.insert("path", "g.node")
+        .attr("class", "link-lintas-gen")
+        .attr("d", pathD)
+        .attr("marker-end", "url(#arrow-lintas)");
+    });
   }
 
   function generatorGarisSiku({ source, target }) {

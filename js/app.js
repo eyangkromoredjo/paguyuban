@@ -2968,7 +2968,7 @@ function resetFormFields() {
 
 
 
-window.updateFormOptions = async function(curParentId = "", curSpouseId = "") {
+window.updateFormOptions = async function(curParentId = "", curSpouseId = "", curPasanganLintasGenId = "") {
 
   const data = await window.ambilData();
 
@@ -3023,6 +3023,22 @@ window.updateFormOptions = async function(curParentId = "", curSpouseId = "") {
     });
 
     selectPasangan.innerHTML = html;
+
+  }
+
+  const selectPasanganLintasGen = document.getElementById('form-id-pasangan-lintas-gen');
+
+  if(selectPasanganLintasGen) {
+
+    let html = '<option value="">- Pilih Pasangan -</option>';
+
+    data.filter(a => String(a.id) !== String(currentMemberId)).forEach(p => {
+
+      html += `<option value="${p.id}" ${String(p.id) === String(curPasanganLintasGenId) ? 'selected' : ''}>${p.nama} (Gen ${p.generasi})</option>`;
+
+    });
+
+    selectPasanganLintasGen.innerHTML = html;
 
   }
 
@@ -3084,7 +3100,15 @@ window.bukaEdit = async function(id) {
 
   document.getElementById('form-tgl-wafat').value = a.tglWafat || '';
 
-  
+  document.getElementById('form-nikah-lintas-gen').checked = a.nikahLintasGen || false;
+
+  document.getElementById('form-id-pasangan-lintas-gen').value = a.idPasanganLintasGen || '';
+
+  // Toggle pasangan lintas gen row visibility
+  const rowPasanganLintasGen = document.getElementById('row-pasangan-lintas-gen');
+  if (rowPasanganLintasGen) {
+    rowPasanganLintasGen.style.display = a.nikahLintasGen ? 'flex' : 'none';
+  }
 
   const genderRadio = document.querySelector(`input[name="form-gender"][value="${a.gender || 'L'}"]`);
 
@@ -3094,7 +3118,7 @@ window.bukaEdit = async function(id) {
 
   window.toggleTglWafat();
 
-  await window.updateFormOptions(a.parentId || a.idOrangTua, a.spouseId || a.idPasangan);
+  await window.updateFormOptions(a.parentId || a.idOrangTua, a.spouseId || a.idPasangan, a.idPasanganLintasGen);
 
   window.bukaModal('modal-anggota');
 
@@ -3240,6 +3264,10 @@ window.simpanAnggota = async function() {
     parentId: document.getElementById('form-id-orang-tua').value,
 
     spouseId: document.getElementById('form-id-pasangan').value,
+
+    nikahLintasGen: document.getElementById('form-nikah-lintas-gen').checked,
+
+    idPasanganLintasGen: document.getElementById('form-id-pasangan-lintas-gen').value,
 
     urutan: document.getElementById('form-urutan').value,
 
