@@ -76,6 +76,29 @@
     }
     .zoom-btn:hover { background: var(--primary-light); color: var(--primary-dark); }
 
+    .gen-filter {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      z-index: 60;
+    }
+    .gen-btn {
+      padding: 0.4rem 0.8rem;
+      background: var(--bg-card);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      font-size: 0.75rem;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    .gen-btn:hover { background: var(--primary-light); }
+    .gen-btn.active { background: var(--primary); color: white; }
+
     /* SILSILAH INTERAKTIF STYLES */
   </style>
   <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -98,6 +121,9 @@
 
     <div class="silsilah-container">
       <svg id="tree-svg"></svg>
+      <div class="gen-filter" id="gen-filter-container">
+        <button class="gen-btn active" data-gen="all">Semua</button>
+      </div>
       <div class="zoom-controls">
         <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
         <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
@@ -135,7 +161,41 @@
   });
 
   let root, treeLayout, svg, gContainer, zoom, currentRotation = 0;
+  let currentGenFilter = 'all'; // 'all' or number (max generation to show)
   const nodeW = 180, nodeH = 70;
+
+  // Function to prune tree based on generation filter
+  function pruneByGeneration(node, maxGen) {
+    if (maxGen === 'all') return node;
+    
+    const maxGenNum = parseInt(maxGen);
+    
+    function pruneRecursive(n) {
+      if (!n) return null;
+      
+      // Get the generation number from the data
+      const nodeGen = n.generasi ? parseInt(n.generasi) : 0;
+      
+      // If this node's generation exceeds the max, remove it and its children
+      if (nodeGen > maxGenNum) {
+        return null;
+      }
+      
+      // Create a copy of the node
+      const prunedNode = { ...n };
+      
+      // Recursively prune children
+      if (n.children && n.children.length > 0) {
+        prunedNode.children = n.children
+          .map(child => pruneRecursive(child))
+          .filter(child => child !== null);
+      }
+      
+      return prunedNode;
+    }
+    
+    return pruneRecursive(node);
+  }
 
   function startRealtimeSilsilah() {
     const now = new Date();
@@ -155,6 +215,42 @@
     data.forEach(a => { 
       const sid = a.spouseId || a.idPasangan;
       if(sid) spouseMap[String(sid)] = a; 
+    });
+
+    // Generate generation filter buttons (static: Gen 0 to Gen 7)
+    const genFilterContainer = document.getElementById('gen-filter-container');
+    
+    // Only generate buttons once
+    if (!genFilterContainer.hasAttribute('data-buttons-generated')) {
+      genFilterContainer.innerHTML = '<button class="gen-btn active" data-gen="all">Semua</button>';
+      
+      for (let i = 0; i <= 7; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'gen-btn';
+        btn.setAttribute('data-gen', i);
+        btn.textContent = `Gen ${i}`;
+        genFilterContainer.appendChild(btn);
+      }
+      
+      // Add event listeners to generation filter buttons
+      genFilterContainer.querySelectorAll('.gen-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          genFilterContainer.querySelectorAll('.gen-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          currentGenFilter = this.getAttribute('data-gen');
+          initD3(data, arisanData); // Re-render with new filter
+        });
+      });
+      
+      genFilterContainer.setAttribute('data-buttons-generated', 'true');
+    }
+    
+    // Restore active state
+    genFilterContainer.querySelectorAll('.gen-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.getAttribute('data-gen') === currentGenFilter) {
+        btn.classList.add('active');
+      }
     });
 
     const nest = (pId) => {
@@ -178,6 +274,9 @@
     const hierarchyData = roots.length > 1 
       ? { name: "Root", dummy: true, children: roots.map(r => ({ ...r, isLunas: lunasIds.includes(r.id), spouse: spouseMap[r.id], children: nest(r.id) })) }
       : { ...roots[0], isLunas: lunasIds.includes(roots[0].id), spouse: spouseMap[roots[0].id], children: nest(roots[0].id) };
+
+    // Prune tree based on generation filter
+    const prunedData = pruneByGeneration(hierarchyData, currentGenFilter);
 
     svg = d3.select("#tree-svg");
     svg.selectAll("*").remove();
@@ -221,7 +320,7 @@
     });
 
     treeLayout = d3.tree().nodeSize([nodeW + 40, nodeH + 100]);
-    root = d3.hierarchy(hierarchyData);
+    root = d3.hierarchy(prunedData);
     root.x0 = svg.node().clientWidth / 2;
     root.y0 = 0;
 

@@ -23,7 +23,7 @@ const HAK_AKSES = {
 
   pengurus: { tambah: true,  edit: true,  hapus: false, kelolaAkun: false },
 
-  anggota:  { tambah: true,  edit: false, hapus: false, kelolaAkun: false },
+  anggota:  { tambah: true,  edit: true, hapus: false, kelolaAkun: false },
 
   guest:    { tambah: false, edit: false, hapus: false, kelolaAkun: false }
 
@@ -739,17 +739,28 @@ function kartu(anggota) {
 
         </div>
 
-        ${(penggunaLogin?.level === 'admin' || penggunaLogin?.level === 'pengurus') ? `
-
-          <div class="a-aksi" style="margin-top:0.85rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
-
-            <button onclick="window.bukaEdit('${anggota.id}')" style="padding:0.5rem 1rem; background:var(--emas); color:var(--coklat-tua); border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">✏ Edit</button>
-
-            ${penggunaLogin?.level === 'admin' ? `<button onclick="window.bukaKonfirmasiHapus('${anggota.id}', '${anggota.nama.replace(/'/g, "\\'")}')" style="padding:0.5rem 1rem; background:#E05C5C; color:#FFF; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">🗑 Hapus</button>` : ''}
-
-          </div>
-
-        ` : ''}
+        ${(() => {
+          // Cek apakah target anggota adalah pengurus atau admin
+          const isTargetPengurus = anggota.level === 'pengurus' || anggota.level === 'admin';
+          
+          // Tampilkan tombol edit jika:
+          // - User adalah admin (bisa edit siapa saja)
+          // - User adalah pengurus (bisa edit siapa saja)
+          // - User adalah anggota biasa (bisa edit non-pengurus saja)
+          const canShowEdit = penggunaLogin?.level === 'admin' || 
+                              penggunaLogin?.level === 'pengurus' ||
+                              (penggunaLogin?.level === 'anggota' && !isTargetPengurus);
+          
+          if (canShowEdit) {
+            return `
+              <div class="a-aksi" style="margin-top:0.85rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+                <button onclick="window.bukaEdit('${anggota.id}')" style="padding:0.5rem 1rem; background:var(--emas); color:var(--coklat-tua); border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">✏ Edit</button>
+                ${penggunaLogin?.level === 'admin' ? `<button onclick="window.bukaKonfirmasiHapus('${anggota.id}', '${anggota.nama.replace(/'/g, "\\'")}')" style="padding:0.5rem 1rem; background:#E05C5C; color:#FFF; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">🗑 Hapus</button>` : ''}
+              </div>
+            `;
+          }
+          return '';
+        })()}
 
         ${penggunaLogin?.level === 'admin' ? `
 
@@ -924,6 +935,8 @@ window.toggleIzinDaftar = async function(id, val) {
     const tahun = tgl.split('-')[0];
 
     a.password = a.panggilan.toLowerCase() + tahun;
+
+    a.passwordChangedManually = false; // Reset flag karena password di-generate ulang
 
     a.level = a.level || 'anggota';
 
@@ -3027,6 +3040,14 @@ window.bukaEdit = async function(id) {
 
 
 
+  // Cek apakah target anggota adalah pengurus atau admin
+  const isTargetPengurus = a.level === 'pengurus' || a.level === 'admin';
+  
+  // Hanya admin dan pengurus yang bisa edit data pengurus/admin
+  if (isTargetPengurus && penggunaLogin.level === 'anggota') {
+    return toast("Hanya Admin dan Pengurus yang dapat mengedit data Pengurus.");
+  }
+
   const isOwner = a.createdBy === penggunaLogin.username;
 
   const canEdit = HAK_AKSES[penggunaLogin.level]?.edit || (penggunaLogin.level === 'anggota' && isOwner);
@@ -3171,6 +3192,31 @@ window.simpanAnggota = async function() {
 
   const dataLama = id ? allData.find(x => String(x.id) === String(id)) : null;
 
+  // Cek apakah target anggota adalah pengurus atau admin (hanya untuk edit)
+  if (id && dataLama) {
+    const isTargetPengurus = dataLama.level === 'pengurus' || dataLama.level === 'admin';
+    
+    // Hanya admin dan pengurus yang bisa edit data pengurus/admin
+    if (isTargetPengurus && penggunaLogin.level === 'anggota') {
+      return toast("Hanya Admin dan Pengurus yang dapat mengedit data Pengurus.");
+    }
+  }
+
+  // Cek perubahan tanggal lahir untuk update password default
+  let passwordBaru = null;
+  const tanggalLahirBaru = document.getElementById('form-lahir').value;
+  const panggilanBaru = formatTeks(document.getElementById('form-panggilan').value.trim());
+  
+  if (id && dataLama && tanggalLahirBaru && dataLama.tanggalLahir) {
+    const tahunLama = dataLama.tanggalLahir.split('-')[0];
+    const tahunBaru = tanggalLahirBaru.split('-')[0];
+    
+    // Jika tahun lahir berubah DAN password belum pernah diubah manual
+    if (tahunLama !== tahunBaru && !dataLama.passwordChangedManually) {
+      passwordBaru = panggilanBaru.toLowerCase() + tahunBaru;
+    }
+  }
+
 
 
   const obj = {
@@ -3181,7 +3227,9 @@ window.simpanAnggota = async function() {
 
     bolehDaftar: kh === 'wafat' ? false : (dataLama ? (dataLama.bolehDaftar || false) : false),
 
-    password: kh === 'wafat' ? null : (dataLama ? (dataLama.password || null) : null),
+    password: passwordBaru || (kh === 'wafat' ? null : (dataLama ? (dataLama.password || null) : null)),
+
+    passwordChangedManually: dataLama ? (dataLama.passwordChangedManually || false) : false,
 
     nama,
 
@@ -3322,8 +3370,9 @@ window.gantiPasswordDariLogin = async function() {
     return alert("Kata sandi lama tidak sesuai.");
   }
 
-  // Simpan password baru
+  // Simpan password baru dan tandai sebagai password yang diubah manual
   userData.password = passBaru;
+  userData.passwordChangedManually = true;
   await set(ref(db, `anggota/${userId}`), userData);
 
   // Bersihkan form dan tutup modal

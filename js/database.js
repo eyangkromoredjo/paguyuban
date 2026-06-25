@@ -358,6 +358,16 @@ function siapEditAnggota(idAnggota) {
         return;
     }
 
+    // Cek apakah target anggota adalah pengurus atau admin
+    const isTargetPengurus = member.level === 'pengurus' || member.level === 'admin';
+    const roleSaatIni = sessionStorage.getItem("pakek_user_role") || 'anggota';
+    
+    // Hanya admin dan pengurus yang bisa edit data pengurus/admin
+    if (isTargetPengurus && roleSaatIni === 'anggota') {
+        alert("Hanya Admin dan Pengurus yang dapat mengedit data Pengurus.");
+        return;
+    }
+
     // PERBAIKAN: Gunakan 'member', bukan 'target'
     const inputStatusArisan = document.getElementById("input-status-arisan");
     if (inputStatusArisan) {
@@ -385,6 +395,16 @@ function simpanPerubahanAnggota() {
     const index = listAnggota.findIndex(a => a.id === idTarget);
     if (index === -1) {
         alert("Gagal memperbarui, data tidak ditemukan!");
+        return;
+    }
+
+    // Cek apakah target anggota adalah pengurus atau admin
+    const isTargetPengurus = listAnggota[index].level === 'pengurus' || listAnggota[index].level === 'admin';
+    const roleSaatIni = sessionStorage.getItem("pakek_user_role") || 'anggota';
+    
+    // Hanya admin dan pengurus yang bisa edit data pengurus/admin
+    if (isTargetPengurus && roleSaatIni === 'anggota') {
+        alert("Hanya Admin dan Pengurus yang dapat mengedit data Pengurus.");
         return;
     }
 
