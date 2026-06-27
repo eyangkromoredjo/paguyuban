@@ -749,7 +749,56 @@ function renderPesertaDropdown() {
     const sel = document.getElementById("select-anggota");
     if (!sel) return;
     sel.innerHTML = '<option value="">-- Pilih Anggota Keluarga --</option>';
-    semuaAnggota.filter(m => !m.wafat && m.status === 'aktif').sort((a, b) => a.nama.localeCompare(b.nama)).forEach(m => {
+    
+    // Filter: Hanya anggota yang sudah menikah (punya spouseId atau dijadikan pasangan)
+    // Aturan: Hanya 1 per pasangan - jika trah hidup tampilkan trah, jika trah wafat tampilkan pasangan
+    // Jika kedua pasangan sudah wafat, jangan tampilkan sama sekali
+    const marriedMembers = [];
+    const processedCouples = new Set();
+    
+    semuaAnggota.forEach(m => {
+        const sId = m.spouseId || m.idPasangan;
+        const coupleKey = sId ? [String(m.id), String(sId)].sort().join('|') : null;
+        
+        if (coupleKey && !processedCouples.has(coupleKey)) {
+            processedCouples.add(coupleKey);
+            
+            // Cari pasangan
+            const spouse = semuaAnggota.find(s => 
+                (sId && String(s.id) === String(sId)) || 
+                (String(s.spouseId || s.idPasangan) === String(m.id))
+            );
+            
+            if (spouse) {
+                // Cek apakah minimal satu dari pasangan masih hidup
+                const bothDead = m.wafat && spouse.wafat;
+                if (bothDead) return; // Jangan tampilkan jika keduanya sudah wafat
+                
+                // Tentukan siapa yang ditampilkan
+                // Jika m adalah trah (spouseId null/undefined di data asli) dan spouse adalah pasangan
+                const mIsTrah = !m.spouseId && !m.idPasangan;
+                const spouseIsTrah = !spouse.spouseId && !spouse.idPasangan;
+                
+                let memberToShow;
+                if (mIsTrah) {
+                    // m adalah trah, spouse adalah pasangan
+                    memberToShow = m.wafat ? spouse : m;
+                } else if (spouseIsTrah) {
+                    // spouse adalah trah, m adalah pasangan
+                    memberToShow = spouse.wafat ? m : spouse;
+                } else {
+                    // Keduanya bukan trah (pasangan lintas generasi), tampilkan yang tidak wafat
+                    memberToShow = m.wafat ? spouse : m;
+                }
+                
+                if (memberToShow && !memberToShow.wafat) {
+                    marriedMembers.push(memberToShow);
+                }
+            }
+        }
+    });
+    
+    marriedMembers.sort((a, b) => a.nama.localeCompare(b.nama)).forEach(m => {
         const opt = document.createElement("option");
         opt.value = m.id;
         opt.textContent = m.nama + (m.ikutArisan ? " ✦" : "");
@@ -945,7 +994,7 @@ function renderPesertaTable() {
     }
 
     const rows = window.semuaAnggota
-        .filter(m => !m.wafat && (m.status || 'aktif') === 'aktif' && (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok' || m.ikutArisan === true))
+        .filter(m => !m.wafat && (m.status === 'aktif' || m.status === 'Pokok' || m.status === 'Non-Pokok' || !m.status) && (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'))
         .filter(m => m.nama.toLowerCase().includes(cari))
         .sort((a, b) => a.nama.localeCompare(b.nama))
         .map(m => {
