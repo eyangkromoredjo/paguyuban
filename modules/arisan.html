@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -775,23 +775,20 @@ function renderPesertaDropdown() {
                 if (bothDead) return; // Jangan tampilkan jika keduanya sudah wafat
                 
                 // Tentukan siapa yang ditampilkan
-                // Jika m adalah trah (spouseId null/undefined di data asli) dan spouse adalah pasangan
-                const mIsTrah = !m.spouseId && !m.idPasangan;
-                const spouseIsTrah = !spouse.spouseId && !spouse.idPasangan;
+                // Prioritaskan anggota trah. Jika trah wafat, tampilkan pasangannya.
+                const trahMember = (m.parentId || m.idOrangTua || String(m.generasi) === '0') ? m : spouse;
+                const nonTrahMember = trahMember.id === m.id ? spouse : m;
                 
                 let memberToShow;
-                if (mIsTrah) {
-                    // m adalah trah, spouse adalah pasangan
-                    memberToShow = m.wafat ? spouse : m;
-                } else if (spouseIsTrah) {
-                    // spouse adalah trah, m adalah pasangan
-                    memberToShow = spouse.wafat ? m : spouse;
+                if (trahMember && !trahMember.wafat) {
+                    memberToShow = trahMember;
+                } else if (nonTrahMember && !nonTrahMember.wafat) {
+                    memberToShow = nonTrahMember;
                 } else {
-                    // Keduanya bukan trah (pasangan lintas generasi), tampilkan yang tidak wafat
-                    memberToShow = m.wafat ? spouse : m;
+                    memberToShow = null; // Keduanya wafat
                 }
                 
-                if (memberToShow && !memberToShow.wafat) {
+                if (memberToShow) {
                     marriedMembers.push(memberToShow);
                 }
             }
@@ -994,7 +991,7 @@ function renderPesertaTable() {
     }
 
     const rows = window.semuaAnggota
-        .filter(m => !m.wafat && (m.status === 'aktif' || m.status === 'Pokok' || m.status === 'Non-Pokok' || !m.status) && (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'))
+        .filter(m => (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'))
         .filter(m => m.nama.toLowerCase().includes(cari))
         .sort((a, b) => a.nama.localeCompare(b.nama))
         .map(m => {
@@ -1416,7 +1413,7 @@ function renderPayChecklist() {
 
     const peserta = window.semuaAnggota
         // Konsistensi: Anggota yang di-nonaktifkan di Dashboard otomatis hilang dari daftar iuran periode
-        .filter(m => !m.wafat && m.status === 'aktif' && (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'))
+        .filter(m => (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'))
         .sort((a, b) => a.nama.localeCompare(b.nama))
         .filter(m => m.nama.toLowerCase().includes(cari));
 
