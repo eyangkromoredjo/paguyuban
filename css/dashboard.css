@@ -1130,15 +1130,35 @@ input:-webkit-autofill:focus {
   text-transform: uppercase;
   letter-spacing: .06em;
 }
-.tabel-ledger td,
-.tabel-bayar td {
+.table-wrapper {
+  max-height: 70vh; /* Batasi tinggi agar scroll vertikal aktif */
+  overflow: auto;   /* Aktifkan scroll */
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative; /* Diperlukan untuk z-index pada child */
+}
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table-wrapper thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 10;
+}
+.table-wrapper tbody td {
   padding: .7rem 1rem;
   font-size: .83rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-dark);
-  /* Removed word-break: break-word; */
 }
-.tabel-bayar { width: 100%; border-collapse: collapse; }
+.table-wrapper tfoot td {
+  background: #fff;
+  font-weight: 700; /* Ditebalkan */
+  font-size: .83rem; /* Ukuran font disamakan dengan isi tabel */
+  padding: .7rem 1rem;
+}
 
 .ledger-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .7rem; margin-bottom: 1.2rem; }
 .ledger-stat {

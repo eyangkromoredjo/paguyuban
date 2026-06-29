@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Tabungan Mandiri - Paguyuban</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #e0e7ff;
+            --accent: #8b5cf6;
+            --accent-orange: #f97316;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-card.total {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+        }
+
+        .stat-card.total .stat-label {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .stat-card.total .stat-value {
+            color: white;
+        }
+
+        .filters {
+            background: var(--bg-white);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .table-container {
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-light);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        tr:hover {
+            background: var(--bg-light);
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .font-bold {
+            font-weight: 600;
+        }
+
+        .text-success {
+            color: var(--success);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .access-denied {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            max-width: 500px;
+            margin: 2rem auto;
+        }
+
+        .access-denied h2 {
+            color: var(--danger);
+            margin-bottom: 1rem;
+        }
+
+        .access-denied p {
+            color: var(--text-light);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Laporan Tabungan Mandiri</h1>
+            <p>Rekapitulasi tabungan mandiri seluruh anggota per periode</p>
+        </div>
+
+        <div id="access-denied" class="access-denied" style="display: none;">
+            <h2>Akses Ditolak</h2>
+            <p>Halaman ini hanya dapat diakses oleh Admin dan Pengurus.</p>
+        </div>
+
+        <div id="content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Anggota Menabung</div>
+                    <div class="stat-value" id="total-members">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Periode</div>
+                    <div class="stat-value" id="total-periods">0</div>
+                </div>
+                <div class="stat-card total">
+                    <div class="stat-label">Total Tabungan Keseluruhan</div>
+                    <div class="stat-value" id="total-savings">Rp 0</div>
+                </div>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="year-filter">Tahun</label>
+                    <select id="year-filter">
+                        <option value="">Semua Tahun</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="member-filter">Anggota</label>
+                    <select id="member-filter">
+                        <option value="">Semua Anggota</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="loadTabunganData()">Terapkan Filter</button>
+                <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+            </div>
+
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Detail Tabungan per Anggota</h2>
+                </div>
+                <div class="table-wrapper">
+                    <table id="tabungan-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Nama Anggota</th>
+                                <th class="text-right">Total Tabungan</th>
+                                <th class="text-center">Jumlah Bulan</th>
+                                <th class="text-right">Rata-rata/Bulan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabungan-tbody">
+                            <tr>
+                                <td colspan="5" class="loading">Memuat data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Detail Tabungan per Bulan</h2>
+                </div>
+                <div class="table-wrapper">
+                    <table id="monthly-table">
+                        <thead>
+                            <tr>
+                                <th>Periode</th>
+                                <th class="text-right">Total Tabungan</th>
+                                <th class="text-center">Jumlah Anggota</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthly-tbody">
+                            <tr>
+                                <td colspan="3" class="loading">Memuat data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db } from '../js/firebase-config.js';
+        import { ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // Define HAK_AKSES
+        const HAK_AKSES = {
+            admin: { tambah: true, edit: true, hapus: true, kelolaAkun: true },
+            pengurus: { tambah: true, edit: true, hapus: false, kelolaAkun: false },
+            anggota: { tambah: true, edit: false, hapus: false, kelolaAkun: false },
+            guest: { tambah: false, edit: false, hapus: false, kelolaAkun: false }
+        };
+
+        let penggunaLogin = null;
+        let semuaAnggota = [];
+        let tabunganData = [];
+
+        // Cek akses
+        async function checkAccess() {
+            const userStr = sessionStorage.getItem('kromoredjo_user');
+            if (!userStr) {
+                showAccessDenied();
+                return false;
+            }
+
+            penggunaLogin = JSON.parse(userStr);
+            const hak = HAK_AKSES[penggunaLogin.level] || HAK_AKSES.guest;
+
+            if (penggunaLogin.level !== 'admin' && penggunaLogin.level !== 'pengurus') {
+                showAccessDenied();
+                return false;
+            }
+
+            return true;
+        }
+
+        function showAccessDenied() {
+            document.getElementById('access-denied').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+        }
+
+        // Load data anggota
+        async function loadAnggota() {
+            try {
+                const snapshot = await get(ref(db, 'anggota'));
+                if (snapshot.exists()) {
+                    semuaAnggota = Object.entries(snapshot.val()).map(([id, data]) => ({
+                        id,
+                        ...data
+                    })).filter(m => m.ikutArisan && (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'));
+                    
+                    // Populate member filter
+                    const memberFilter = document.getElementById('member-filter');
+                    memberFilter.innerHTML = '<option value="">Semua Anggota</option>';
+                    semuaAnggota.sort((a, b) => a.nama.localeCompare(b.nama, 'id-ID', { sensitivity: 'base' }))
+                        .forEach(m => {
+                            const option = document.createElement('option');
+                            option.value = m.id;
+                            option.textContent = m.nama;
+                            memberFilter.appendChild(option);
+                        });
+                }
+            } catch (error) {
+                console.error('Error loading anggota:', error);
+            }
+        }
+
+        // Load data tabungan dari transaksi
+        async function loadTabunganData() {
+            const yearFilter = document.getElementById('year-filter').value;
+            const memberFilter = document.getElementById('member-filter').value;
+
+            try {
+                const snapshot = await get(ref(db, 'transaksi'));
+                if (!snapshot.exists()) {
+                    showNoData();
+                    return;
+                }
+
+                const transactions = snapshot.val();
+                tabunganData = [];
+
+                // Filter transaksi tabungan mandiri
+                for (const [trxId, trx] of Object.entries(transactions)) {
+                    if (trx.kategori === 'Tabungan Mandiri' && trx.tipe === 'masuk') {
+                        // Parse deskripsi untuk mendapatkan info anggota dan periode
+                        // Format: [IURAN] Periode YYYY-MM - Nama Anggota (Tabungan)
+                        const deskripsi = trx.deskripsi || '';
+                        const match = deskripsi.match(/\[IURAN\] Periode (\d{4}-\d{2}) - (.+) \(Tabungan\)/);
+                        
+                        if (match) {
+                            const periode = match[1];
+                            const namaAnggota = match[2];
+                            const tahun = periode.split('-')[0];
+
+                            // Filter by year
+                            if (yearFilter && tahun !== yearFilter) continue;
+
+                            // Cari anggota berdasarkan nama
+                            const anggota = semuaAnggota.find(a => a.nama === namaAnggota);
+                            if (!anggota) continue;
+
+                            // Filter by member
+                            if (memberFilter && anggota.id !== memberFilter) continue;
+
+                            tabunganData.push({
+                                trxId,
+                                periode,
+                                tahun,
+                                bulan: periode.split('-')[1],
+                                anggotaId: anggota.id,
+                                namaAnggota: anggota.nama,
+                                jumlah: parseInt(trx.jumlah) || 0,
+                                tanggal: trx.tanggal
+                            });
+                        }
+                    }
+                }
+
+                renderTabunganTable();
+                renderMonthlyTable();
+                updateStats();
+
+            } catch (error) {
+                console.error('Error loading tabungan data:', error);
+                document.getElementById('tabungan-tbody').innerHTML = '<tr><td colspan="5" class="no-data">Terjadi kesalahan saat memuat data.</td></tr>';
+            }
+        }
+
+        function renderTabunganTable() {
+            const tbody = document.getElementById('tabungan-tbody');
+            
+            // Group by anggota
+            const byAnggota = {};
+            tabunganData.forEach(data => {
+                if (!byAnggota[data.anggotaId]) {
+                    byAnggota[data.anggotaId] = {
+                        nama: data.namaAnggota,
+                        total: 0,
+                        count: 0,
+                        periodes: []
+                    };
+                }
+                byAnggota[data.anggotaId].total += data.jumlah;
+                byAnggota[data.anggotaId].count++;
+                byAnggota[data.anggotaId].periodes.push(data.periode);
+            });
+
+            // Sort by total descending
+            const sorted = Object.values(byAnggota).sort((a, b) => b.total - a.total);
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">Tidak ada data tabungan.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sorted.map((item, index) => {
+                const avg = item.count > 0 ? item.total / item.count : 0;
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td class="font-bold">${item.nama}</td>
+                        <td class="text-right font-bold text-success">${formatRp(item.total)}</td>
+                        <td class="text-center">${item.count} bulan</td>
+                        <td class="text-right">${formatRp(avg)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderMonthlyTable() {
+            const tbody = document.getElementById('monthly-tbody');
+            
+            // Group by periode
+            const byPeriode = {};
+            tabunganData.forEach(data => {
+                if (!byPeriode[data.periode]) {
+                    byPeriode[data.periode] = {
+                        total: 0,
+                        count: 0
+                    };
+                }
+                byPeriode[data.periode].total += data.jumlah;
+                byPeriode[data.periode].count++;
+            });
+
+            // Sort by periode descending
+            const sorted = Object.entries(byPeriode).sort((a, b) => b[0].localeCompare(a[0]));
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="no-data">Tidak ada data tabungan.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sorted.map(([periode, data]) => {
+                const [tahun, bulan] = periode.split('-');
+                const namaBulan = getNamaBulan(parseInt(bulan));
+                return `
+                    <tr>
+                        <td class="font-bold">${namaBulan} ${tahun}</td>
+                        <td class="text-right font-bold text-success">${formatRp(data.total)}</td>
+                        <td class="text-center">${data.count} anggota</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const totalMembers = new Set(tabunganData.map(d => d.anggotaId)).size;
+            const totalPeriods = new Set(tabunganData.map(d => d.periode)).size;
+            const totalSavings = tabunganData.reduce((sum, d) => sum + d.jumlah, 0);
+
+            document.getElementById('total-members').textContent = totalMembers;
+            document.getElementById('total-periods').textContent = totalPeriods;
+            document.getElementById('total-savings').textContent = formatRp(totalSavings);
+        }
+
+        function populateYearFilter() {
+            const years = new Set(tabunganData.map(d => d.tahun));
+            const yearFilter = document.getElementById('year-filter');
+            yearFilter.innerHTML = '<option value="">Semua Tahun</option>';
+            
+            Array.from(years).sort().reverse().forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('year-filter').value = '';
+            document.getElementById('member-filter').value = '';
+            loadTabunganData();
+        }
+
+        function showNoData() {
+            document.getElementById('tabungan-tbody').innerHTML = '<tr><td colspan="5" class="no-data">Tidak ada data tabungan.</td></tr>';
+            document.getElementById('monthly-tbody').innerHTML = '<tr><td colspan="3" class="no-data">Tidak ada data tabungan.</td></tr>';
+            document.getElementById('total-members').textContent = '0';
+            document.getElementById('total-periods').textContent = '0';
+            document.getElementById('total-savings').textContent = 'Rp 0';
+        }
+
+        function formatRp(num) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+        }
+
+        function getNamaBulan(bulan) {
+            const nama = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                          'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            return nama[bulan - 1] || '';
+        }
+
+        // Initialize
+        async function init() {
+            const hasAccess = await checkAccess();
+            if (!hasAccess) return;
+
+            await loadAnggota();
+            await loadTabunganData();
+            populateYearFilter();
+        }
+
+        // Expose functions to window
+        window.loadTabunganData = loadTabunganData;
+        window.resetFilters = resetFilters;
+
+        // Start
+        init();
+    </script>
+</body>
+</html>

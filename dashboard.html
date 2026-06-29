@@ -246,6 +246,10 @@
               <div class="service-icon" style="background:linear-gradient(135deg,#E65100,#FFA726)">💰</div>
               <span class="service-label">Manajemen Arisan</span>
             </div>
+            <div class="service-item" onclick="location.href='modules/tabungan.html'" id="service-tabungan" style="display:none">
+              <div class="service-icon" style="background:linear-gradient(135deg,#10B981,#34D399)">📊</div>
+              <span class="service-label">Laporan Tabungan</span>
+            </div>
             <div class="service-item" onclick="location.href='modules/laporan.html'">
               <div class="service-icon" style="background:linear-gradient(135deg,#1B5E20,#66BB6A)">📊</div>
               <span class="service-label">Laporan</span>
@@ -469,8 +473,8 @@
           </thead>
           <tbody id="ledger-body"></tbody>
           <tfoot>
-            <tr><td colspan="4">TOTAL</td><td id="ledger-total-masuk" style="text-align:right; font-weight:bold; color:#2e7d32;"></td><td id="ledger-total-keluar" style="text-align:right; font-weight:bold; color:#c62828;"></td><td></td></tr>
-            <tr><td colspan="4" style="font-weight:bold; font-size:1rem;">SALDO AKHIR</td><td id="ledger-saldo-akhir" colspan="3" style="text-align:right; font-weight:bold; font-size:1.2rem;"></td></tr>
+            <tr><td colspan="4">TOTAL</td><td id="ledger-total-masuk" style="text-align:right; color:#2e7d32;"></td><td id="ledger-total-keluar" style="text-align:right; color:#c62828;"></td><td></td></tr>
+            <tr><td colspan="4">SALDO AKHIR</td><td id="ledger-saldo-akhir" colspan="3" style="text-align:right;"></td></tr>
           </tfoot>
         </table>
       </div>

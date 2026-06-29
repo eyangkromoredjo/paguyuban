@@ -196,8 +196,10 @@ function proceedLogin(akun) {
 
 
   const shortcutLogs = document.getElementById('shortcut-logs');
+  const serviceTabungan = document.getElementById('service-tabungan');
 
   if(shortcutLogs) shortcutLogs.style.display = akun.level === 'admin' ? 'flex' : 'none';
+  if(serviceTabungan) serviceTabungan.style.display = (akun.level === 'admin' || akun.level === 'pengurus') ? 'flex' : 'none';
 
 
 
@@ -2008,8 +2010,9 @@ window.renderBukuBesar = async function() {
     const isMasuk = t.tipe === 'masuk';
 
     if (isMasuk) totalMasuk += t.jumlah; else totalKeluar += t.jumlah;
-
-    const isLocked = ['Tabungan', 'Sosial'].includes(t.kategori);
+    const fotoHtml = t.foto ? `<button class="btn-sm" style="font-size:0.65rem; padding:4px 8px;" onclick="window.lihatBukti('${t.id}')">🖼️ Lihat</button>` : '<span style="opacity:0.3; font-size:0.7rem">-</span>';
+    // Mengunci transaksi yang berasal dari sistem arisan (Tabungan, Sosial, dan Arisan Pokok/ARISAN)
+    const isLocked = ['Tabungan', 'Sosial'].includes(t.kategori) || (t.deskripsi && (t.deskripsi.includes('[IURAN]') || t.deskripsi.includes('[ARISAN]')));
 
 
 
@@ -2021,7 +2024,8 @@ window.renderBukuBesar = async function() {
 
         <td>${t.deskripsi}<br><small style="color:var(--cb); font-size:0.7rem">Oleh: ${t.inputOleh || 'Admin'}</small></td>
 
-        <td><span class="badge" style="background:rgba(201,168,76,0.1); color:var(--el)">${t.kategori}</span></td>
+        <td style="text-align:center">${fotoHtml}</td>
+        <td><span class="badge" style="background:rgba(201,168,76,0.1); color:var(--text-mid)">${t.kategori}</span></td>
 
         <td class="txt-masuk" style="color: ${isMasuk ? '#2e7d32' : 'inherit'}; font-weight: 600;">${isMasuk ? formatRp(t.jumlah) : '-'}</td>
 
@@ -2047,7 +2051,7 @@ window.renderBukuBesar = async function() {
 
   if (body) {
 
-    body.innerHTML = html || '<tr><td colspan="6" style="text-align:center; padding:2rem; opacity:0.5">Belum ada transaksi.</td></tr>';
+    body.innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding:2rem; opacity:0.5">Belum ada transaksi.</td></tr>';
 
     document.getElementById('ledger-total-masuk').textContent = formatRp(totalMasuk);
 
@@ -2128,12 +2132,6 @@ window.simpanTransaksi = async function() {
 
 
   if (!tgl || !dsk || isNaN(jml)) return toast('Harap isi semua field transaksi.');
-
-
-
-  if (['Tabungan', 'Sosial'].includes(kat)) return toast('Gunakan modul Arisan untuk kategori ini.');
-
-
 
   const trxData = {
 

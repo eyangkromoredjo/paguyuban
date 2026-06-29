@@ -168,7 +168,7 @@ window.renderBukuBesar = async function() {
         <td style="white-space:nowrap">${t.tanggal.split('-').reverse().join('/')}</td>
         <td>${t.deskripsi}<br><small style="color:var(--cb); font-size:0.7rem">Oleh: ${t.inputOleh || 'Admin'}</small></td>
         <td style="text-align:center">${fotoHtml}</td>
-        <td><span class="badge" style="background:rgba(201,168,76,0.1); color:var(--el)">${t.kategori}</span></td>
+        <td><span class="badge" style="background:rgba(201,168,76,0.1); color:var(--text-mid)">${t.kategori}</span></td>
         <td class="txt-masuk" style="color: ${isMasuk ? '#2e7d32' : 'inherit'}; font-weight: 600;">${isMasuk ? formatRp(t.jumlah) : '-'}</td>
         <td class="txt-keluar" style="color: ${!isMasuk ? '#c62828' : 'inherit'}; font-weight: 600;">${!isMasuk ? formatRp(t.jumlah) : '-'}</td>
         <td style="text-align:center; white-space:nowrap;">

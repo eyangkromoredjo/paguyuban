@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -76,9 +76,31 @@
         .komponen-iuran-cell { white-space: normal; } /* Allow normal wrapping */
         .member-name-cell { font-size: 0.7rem; font-weight: 600; }
         
-        /* Status Badges */
+        /* Status Badges untuk Tabel Rekapitulasi */
         .badge-lunas { background: #e8f5e9; color: #2e7d32; border: none; padding: 4px 10px; font-family: 'Outfit', sans-serif; font-weight: 700; border-radius: 20px; font-size: 0.7rem; }
         .badge-belum { background: #fce4ec; color: #c62828; border: none; padding: 4px 10px; font-family: 'Outfit', sans-serif; font-weight: 700; border-radius: 20px; font-size: 0.7rem; }
+        
+        /* Circle Indicators untuk Checklist Pembayaran */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .status-indicator.lunas {
+            background: #4caf50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+        .status-indicator.belum {
+            background: #f44336;
+            box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+        }
+        .status-indicator.opsional {
+            background: #9e9e9e;
+            box-shadow: 0 0 0 3px rgba(158, 158, 158, 0.2);
+        }
         .status-pill { border-radius: 20px; font-family: 'Outfit', sans-serif; padding: 3px 10px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
         .status-pokok { background: var(--primary-light); color: var(--primary); border: none; }
         .status-non { background: #fff3e0; color: #e65100; border: none; }
@@ -346,10 +368,10 @@
                         <thead>
                             <tr>
                                 <th>Nama</th>
-                                <th style="text-align:center; width:100px;">Wajib</th>
+                                <th style="text-align:center; width:100px;">Wajib Bayar</th>
                                 <th style="text-align:center; width:60px;">Hadir</th>
-                                <th style="text-align:center; width:60px;">Lunas</th>
-                                <th style="width:150px;">Status Bayar</th>
+                                <th style="text-align:center; width:100px;">Status Bayar</th>
+                                <th style="width:120px;">Metode Bayar</th>
                             </tr>
                         </thead>
                         <tbody id="pay-tbody"></tbody>
@@ -1161,7 +1183,14 @@ function renderIuranHistory() {
     tbody.innerHTML = periods.map(entry => {
         const listPay = Array.isArray(entry.pembayaran) ? entry.pembayaran : [];
         const lunasCount = listPay.filter(p => p.paid).length;
-        const belumCount = listPay.length - lunasCount;
+
+        // LOGIKA BARU: Hitung 'belum lunas' hanya untuk anggota pokok
+        const belumLunasPokok = listPay.filter(p => {
+            if (p.paid) return false; // Abaikan yang sudah lunas
+            const member = window.semuaAnggota.find(m => String(m.id) === String(p.memberId));
+            return member && member.tipeArisan === 'pokok'; // Hanya hitung jika anggota pokok
+        });
+        const belumCount = belumLunasPokok.length;
         const [y, m] = entry.periode.split('-');
         const periodeTeks = `${BULAN_NM[parseInt(m)]} ${y}`;
 
@@ -1414,11 +1443,11 @@ function renderPayChecklist() {
     const peserta = window.semuaAnggota
         // Konsistensi: Anggota yang di-nonaktifkan di Dashboard otomatis hilang dari daftar iuran periode
         .filter(m => (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'))
-        .sort((a, b) => a.nama.localeCompare(b.nama))
+        .sort((a, b) => a.nama.localeCompare(b.nama, 'id-ID', { sensitivity: 'base' }))
         .filter(m => m.nama.toLowerCase().includes(cari));
 
     if (!peserta.length) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8A7B6C; padding:18px;">Tidak ada peserta aktif.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#8A7B6C; padding:18px;">Tidak ada peserta aktif.</td></tr>';
         return;
     }
 
@@ -1437,6 +1466,7 @@ function renderPayChecklist() {
 
         const komponen = p.iuranKomponen || { arisan:false, sosial:false, tabungan:false };
         const nominal = p.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+
         let totalNominal = 0;
         if (komponen.arisan) totalNominal += nominal.arisan || 55000;
         if (komponen.sosial) totalNominal += nominal.sosial || 40000;
@@ -1472,14 +1502,26 @@ function renderPayChecklist() {
         const mainNick = p.panggilan || p.nama.split(' ')[0];
         const displayName = `${prefix} ${mainNick}${spouseInfo}`;
 
+        // LOGIKA BARU: Tentukan status bayar berdasarkan tipe anggota
+        let statusBayarHtml = '';
+        if (paid) {
+            statusBayarHtml = `<span class="status-indicator lunas"></span>`;
+        } else {
+            if (p.tipeArisan === 'pokok') {
+                statusBayarHtml = `<span class="status-indicator belum"></span>`;
+            } else {
+                statusBayarHtml = `<span class="status-indicator opsional"></span>`;
+            }
+        }
+
         const nominalText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalNominal);
         const isNonPokok = p.tipeArisan === 'non-pokok';
         return `
             <tr>
                 <td class="${isNonPokok ? 'non-pokok-row' : ''}" style="font-weight:600; vertical-align:middle; line-height:1.4; padding-top:10px; padding-bottom:10px;">${displayName}</td>
                 <td class="${isNonPokok ? 'non-pokok-row' : ''}" style="text-align:right; vertical-align:middle;">${nominalText}</td>
-                <td style="text-align:center; vertical-align:middle;"><input type="checkbox" class="hadir-chk" ${hadir ? 'checked' : ''}></td>
-                <td style="text-align:center; vertical-align:middle;"><input type="checkbox" class="pay-chk" data-member="${p.id}" ${paid ? 'checked' : ''} onchange="handlePaymentToggle(event)"></td>
+                <td style="text-align:center; vertical-align:middle;"><input type="checkbox" class="hadir-chk" data-member="${p.id}" ${hadir ? 'checked' : ''}></td>
+                <td style="text-align:center; vertical-align:middle;"><input type="checkbox" class="pay-chk" data-member="${p.id}" ${paid ? 'checked' : ''}> ${statusBayarHtml}</td>
                 <td style="vertical-align:middle;">
                     <select class="form-control metode-bayar" style="font-size:0.7rem; padding:4px 8px; margin:0; height: auto; min-width: auto; color: var(--text-dark); border-color: var(--border); background: #f8fafc;">
                         <option value="cash" ${metode === 'cash' ? 'selected' : ''}>Cash</option>
@@ -1491,11 +1533,17 @@ function renderPayChecklist() {
     }).join('');
     tbody.innerHTML = rows;
 
+    // Tambahkan event listener ke checkbox payment
+    document.querySelectorAll('.pay-chk').forEach(chk => {
+        chk.addEventListener('change', handlePaymentToggle);
+    });
+
     const fmt = n => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     const pokokEl = document.getElementById('total-pokok');
     const sosialEl = document.getElementById('total-sosial');
     const tabunganEl = document.getElementById('total-tabungan');
     const wajibEl = document.getElementById('total-wajib');
+    grandTotalTerbayar = totalArisan + totalSosial + totalTabungan;
 
     if(pokokEl) pokokEl.textContent = fmt(totalArisan);
     if(sosialEl) sosialEl.textContent = fmt(totalSosial);
@@ -1568,35 +1616,65 @@ window.populatePeriodeSelectors = populatePeriodeSelectors;
 function handlePaymentToggle(e) {
     let currentTotal = 0, totalArisan = 0, totalSosial = 0, totalTabungan = 0;
     const rows = Array.from(document.querySelectorAll('#pay-tbody tr'));
+    
     rows.forEach(row => {
         const payChk = row.querySelector('.pay-chk');
-        if (payChk && payChk.checked) {
-            const memberId = payChk.getAttribute('data-member');
-            const p = window.semuaAnggota.find(m => String(m.id) === String(memberId));
-            if (p) {
-                const komponen = p.iuranKomponen || { arisan:false, sosial:false, tabungan:false };
-                const nominal = p.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+        if (!payChk) return;
+        
+        const memberId = payChk.getAttribute('data-member');
+        const p = window.semuaAnggota.find(m => String(m.id) === String(memberId));
+        if (!p) return;
+
+        const komponen = p.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
+        const nominal = p.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+
+        // Hitung total jika checkbox dicentang
+        if (payChk.checked) {
+            let pTotal = 0;
+            if (komponen.arisan) { 
+                totalArisan += nominal.arisan || 55000; 
+                pTotal += nominal.arisan || 55000; 
+            }
+            if (komponen.sosial) { 
+                totalSosial += nominal.sosial || 40000; 
+                pTotal += nominal.sosial || 40000; 
+            }
+            if (komponen.tabungan) { 
+                totalTabungan += nominal.tabungan || 5000; 
+                pTotal += nominal.tabungan || 5000; 
+            }
+            currentTotal += pTotal;
+        }
+
+        // Update status badge secara real-time
+        const statusCell = row.cells[3];
+        if (statusCell) {
+            // Cari indikator yang sudah ada
+            const indicator = statusCell.querySelector('.status-indicator');
+            
+            if (indicator) {
+                // Simpan state checkbox saat ini
+                const isChecked = payChk.checked;
                 
-                let pTotal = 0;
-                if (komponen.arisan) {
-                    const val = nominal.arisan || 55000;
-                    totalArisan += val;
-                    pTotal += val;
+                // Update class indikator yang sudah ada
+                indicator.className = 'status-indicator';
+                if (isChecked) {
+                    indicator.classList.add('lunas');
+                } else {
+                    if (p.tipeArisan === 'pokok') {
+                        indicator.classList.add('belum');
+                    } else {
+                        indicator.classList.add('opsional');
+                    }
                 }
-                if (komponen.sosial) {
-                    const val = nominal.sosial || 40000;
-                    totalSosial += val;
-                    pTotal += val;
-                }
-                if (komponen.tabungan) {
-                    const val = nominal.tabungan || 5000;
-                    totalTabungan += val;
-                    pTotal += val;
-                }
-                currentTotal += pTotal;
+                
+                // Pastikan checkbox state tetap benar
+                payChk.checked = isChecked;
             }
         }
     });
+
+    // Update summary labels
     const fmt = n => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     if(document.getElementById('total-pokok')) document.getElementById('total-pokok').textContent = fmt(totalArisan);
     if(document.getElementById('total-sosial')) document.getElementById('total-sosial').textContent = fmt(totalSosial);
@@ -1622,74 +1700,61 @@ async function savePayments() {
     const periode = getPeriodeFromSelectors('pay') || getPeriodeFromSelectors('jadwal');
     if (!periode) { alert('Pilih periode terlebih dahulu.'); return; }
 
-    window.storageArisan.iuran_bulanan = window.storageArisan.iuran_bulanan || [];
-
     const rows = Array.from(document.querySelectorAll('#pay-tbody tr'));
-    let totalPokok = 0, totalSosial = 0, totalTabungan = 0;
+    const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
 
     const pembayaran = rows.map(row => {
         const payChk = row.querySelector('.pay-chk');
         const hadirChk = row.querySelector('.hadir-chk');
         const metodeSel = row.querySelector('.metode-bayar');
         const mId = payChk.getAttribute('data-member');
-
-        if (payChk.checked) {
-            const m = window.semuaAnggota.find(mem => String(mem.id) === String(mId));
-            if (m) {
-                const nom = m.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
-                const kom = m.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
-                if (kom.arisan) totalPokok += (parseInt(nom.arisan) || 0);
-                if (kom.sosial) totalSosial += (parseInt(nom.sosial) || 0);
-                if (kom.tabungan) totalTabungan += (parseInt(nom.tabungan) || 0);
-            }
-        }
-
         return {
             memberId: mId,
             paid: payChk.checked,
             hadir: hadirChk.checked,
             metodeBayar: metodeSel.value,
-            time: payChk.checked ? Date.now() : null
+            time: payChk.checked ? Date.now() : null,
         };
     });
 
+    // SINKRONISASI KE BUKU BESAR (TRANSAKSI)
+    // Hapus semua entri lama untuk periode ini terlebih dahulu
+    const originIdPrefix = `iuran_${periode.replace('-', '_')}`;
+    const trxSnap = await get(ref(db, "transaksi"));
+    if (trxSnap.exists()) {
+        const trxData = trxSnap.val();
+        const promises = [];
+        for (const trxId in trxData) {
+            if (trxData[trxId].originId && trxData[trxId].originId.startsWith(originIdPrefix)) {
+                promises.push(remove(ref(db, `transaksi/${trxId}`)));
+            }
+        }
+        await Promise.all(promises);
+    }
+
+    // Buat entri baru berdasarkan status checkbox saat ini
+    for (const p of pembayaran) {
+        if (p.paid) {
+            const m = window.semuaAnggota.find(mem => String(mem.id) === String(p.memberId));
+            if (!m) continue;
+            const nom = m.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+            const kom = m.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
+            const deskripsi = `[IURAN] Periode ${periode} - ${m.nama}`;
+            const pOriginId = `${originIdPrefix}_${m.id}`;
+
+            if (kom.arisan && nom.arisan > 0) await set(push(ref(db, "transaksi")), { tanggal: `${periode}-01`, deskripsi: `${deskripsi} (Arisan)`, jumlah: nom.arisan, kategori: 'Kas', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${pOriginId}_arisan` });
+            if (kom.sosial && nom.sosial > 0) await set(push(ref(db, "transaksi")), { tanggal: `${periode}-01`, deskripsi: `${deskripsi} (Sosial)`, jumlah: nom.sosial, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${pOriginId}_sosial` });
+            if (kom.tabungan && nom.tabungan > 0) await set(push(ref(db, "transaksi")), { tanggal: `${periode}-01`, deskripsi: `${deskripsi} (Tabungan)`, jumlah: nom.tabungan, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${pOriginId}_tabungan` });
+        }
+    }
+
+    // Simpan status pembayaran ke arisan_global
+    window.storageArisan.iuran_bulanan = window.storageArisan.iuran_bulanan || [];
     const idx = window.storageArisan.iuran_bulanan.findIndex(e => e.periode === periode);
     const entri = { periode, pembayaran };
     if (idx === -1) window.storageArisan.iuran_bulanan.unshift(entri); else window.storageArisan.iuran_bulanan[idx] = entri;
 
     await set(ref(db, "arisan_global"), window.storageArisan);
-
-    // SINKRONISASI KE BUKU BESAR (TRANSAKSI)
-    const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
-    const syncTrx = async (label, total, kategori) => {
-        const desc = `[IURAN] ${label} Periode ${periode}`;
-        const trxSnap = await get(ref(db, "transaksi"));
-        const allTrx = trxSnap.exists() ? trxSnap.val() : {};
-        const existingKey = Object.keys(allTrx).find(k => allTrx[k].deskripsi === desc);
-
-        const trxData = {
-            tanggal: `${periode}-01`,
-            deskripsi: desc,
-            jumlah: total,
-            kategori: kategori,
-            tipe: 'masuk',
-            inputOleh: user ? user.nama : 'Admin',
-            updatedAt: Date.now()
-        };
-
-        if (existingKey) {
-            // Update jika sudah ada (misal ada perubahan status lunas)
-            await update(ref(db, `transaksi/${existingKey}`), trxData);
-        } else if (total > 0) {
-            // Buat baru jika belum ada dan total > 0
-            trxData.createdAt = Date.now();
-            await set(push(ref(db, "transaksi")), trxData);
-        }
-    };
-
-    await syncTrx("Dana Sosial", totalSosial, "Sosial");
-    await syncTrx("Tabungan", totalTabungan, "Tabungan");
-    await syncTrx("Arisan Pokok", totalPokok, "kas");
 
     window.renderPesertaTable();
     window.renderPayChecklist();
