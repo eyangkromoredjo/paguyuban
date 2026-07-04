@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -364,14 +364,19 @@
                     <input type="text" id="search-pay" class="form-control" placeholder="Ketik nama anggota..." oninput="window.renderPayChecklist()">
                 </div>
                 <div class="table-wrapper">
-                    <table style="min-width: 520px;">
+                    <table style="min-width: 800px;">
                         <thead>
                             <tr>
-                                <th>Nama</th>
-                                <th style="text-align:center; width:100px;">Wajib Bayar</th>
+                                <th>Nama Anggota</th>
+                                <th style="width:90px;">Tanggal</th>
+                                <th style="text-align:center; width:100px;">Status</th>
                                 <th style="text-align:center; width:60px;">Hadir</th>
-                                <th style="text-align:center; width:100px;">Status Bayar</th>
-                                <th style="width:120px;">Metode Bayar</th>
+                                <th style="width:110px;">Metode</th>
+                                <th style="text-align:center; width:80px;">Bukti</th>
+                                <th style="text-align:right;">Arisan</th>
+                                <th style="text-align:right;">Sosial</th>
+                                <th style="text-align:right;">Tabungan</th>
+                                <th style="text-align:right;">Total</th>
                             </tr>
                         </thead>
                         <tbody id="pay-tbody"></tbody>
@@ -392,10 +397,9 @@
                    </div>
                    <div class="stat-card" style="margin-bottom:0; padding:10px; border-top:3px solid var(--accent-orange)">
                        <span class="stat-lbl">Total Terbayar</span>
-                       <div id="total-wajib" class="stat-num" style="font-size:1.3rem; color:var(--accent-orange)">Rp 0</div>
+                       <div id="total-wajib" class="stat-num" style="font-size:1.1rem; color:var(--accent-orange)">Rp 0</div>
                    </div>
                 </div>
-                <button class="btn-primary" style="margin-top:1.5rem;" onclick="savePresensi()">Simpan Presensi & Iuran</button>
 
                 <!-- TABEL REKAP IURAN BULANAN -->
                 <div style="margin-top: 3rem;">
@@ -498,21 +502,127 @@
                         <div class="stat-num" id="val-cycle-todo">0</div>
                     </div>
                 </div>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Anggota Belum Dapat (Queue)</th>
-                                <th>Kategori</th>
-                            </tr>
-                        </thead>
-                        <tbody id="body-report-siklus"></tbody>
-                    </table>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+                    <div>
+                        <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem;">✅ Riwayat Pemenang Arisan</h4>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr><th>Periode</th><th>Nama Pemenang</th><th>Lokasi Berikutnya</th></tr>
+                                </thead>
+                                <tbody id="body-report-siklus-pemenang"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem;">⏳ Antrian Berikutnya</h4>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr><th>Anggota Belum Dapat</th><th>Kategori</th></tr>
+                                </thead>
+                                <tbody id="body-report-siklus-antrian"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 </div>
+
+<!-- MODAL EDIT PEMBAYARAN IURAN -->
+<div class="modal-overlay" id="modal-edit-pembayaran">
+    <div class="modal-box" style="max-width: 480px;">
+        <div class="modal-header">
+            <p class="modal-judul">Detail Iuran: <span id="edit-iuran-nama"></span></p>
+            <button class="modal-tutup" onclick="window.tutupModal('modal-edit-pembayaran')">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-iuran-member-id">
+            <input type="hidden" id="edit-iuran-periode">
+            
+            <div class="form-group">
+                <label>Tanggal Pembayaran</label>
+                <input type="date" id="edit-iuran-tanggal" class="form-control">
+            </div>
+            
+            <h4 style="font-size: 0.9rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Jenis Pemasukan</h4>
+            
+            <div id="komponen-arisan-pokok" class="form-group" style="display: none;">
+                <label>Arisan Pokok</label>
+                <input type="text" id="edit-iuran-nominal-arisan" class="form-control" disabled>
+            </div>
+            
+            <div id="komponen-dana-sosial" class="form-group" style="display: none;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="edit-iuran-chk-sosial" style="width: auto;" onchange="this.parentElement.nextElementSibling.disabled = !this.checked">
+                    Dana Sosial
+                </label>
+                <input type="number" id="edit-iuran-nominal-sosial" class="form-control" placeholder="Masukkan nominal sosial">
+            </div>
+
+            <div id="komponen-tabungan" class="form-group" style="display: none;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="edit-iuran-chk-tabungan" style="width: auto;" onchange="this.parentElement.nextElementSibling.disabled = !this.checked">
+                    Tabungan
+                </label>
+                <input type="number" id="edit-iuran-nominal-tabungan" class="form-control" placeholder="Masukkan nominal tabungan">
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label>Status Kehadiran</label>
+                <div style="padding: .8rem 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin:0;">
+                        <input type="checkbox" id="edit-iuran-hadir" style="width: auto;">
+                        Hadir dalam pertemuan
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label>Metode Bayar</label>
+                <select id="edit-iuran-metode" class="form-control">
+                    <option value="cash">Cash</option>
+                    <option value="transfer">Transfer</option>
+                    <option value="titip">Titip</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="grup-bukti-transfer" style="display: none; margin-top: 1.5rem;">
+                <label>Bukti Transfer</label>
+                <input type="hidden" id="edit-iuran-bukti-base64">
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-sm solid" onclick="document.getElementById('input-bukti-transfer').click()" style="flex:1; padding:0 1rem; height:48px; background:var(--em); color:var(--ct); border:none; font-family:'Cinzel'; font-weight:800; font-size:0.7rem; cursor:pointer;">📸 Ambil/Pilih Foto</button>
+                    <button type="button" id="btn-hapus-bukti-transfer" class="btn-sm danger" onclick="window.hapusFotoBuktiTransfer()" style="display:none;">Hapus</button>
+                </div>
+                <input type="file" id="input-bukti-transfer" accept="image/*" style="display:none" onchange="window.prosesUploadBuktiTransfer(this)">
+                <div id="preview-bukti-container" style="margin-top:10px; display:none;">
+                    <img id="preview-bukti-img" src="" style="max-width:100px; height:auto; border-radius:8px; border:1px solid var(--border);">
+                </div>
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <button class="btn-batal" onclick="window.tutupModal('modal-edit-pembayaran')">Batal</button>
+            <button class="btn-simpan" onclick="window.simpanEditPembayaran()">Simpan Perubahan</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL LIHAT BUKTI (Disalin dari dashboard.html) -->
+<div class="modal-overlay" id="modal-lihat-bukti">
+  <div class="modal-box" style="max-width:500px; padding:0.5rem;">
+    <div class="modal-header" style="padding:0.5rem 1rem;">
+      <p class="modal-judul">Bukti Transaksi</p>
+      <button class="modal-tutup" onclick="window.tutupModal('modal-lihat-bukti')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <img id="img-bukti-view" src="" style="width:100%; height:auto; display:block; border-radius: 0 0 12px 12px;">
+    </div>
+  </div>
+</div>
+
 
 <script type="module">
 import { db } from '../js/firebase-config.js';
@@ -767,57 +877,62 @@ window.tutupFormAturPeserta = function() {
     if (tableWrapper) tableWrapper.style.display = 'block';
 };
 
+/**
+ * Fungsi terpusat untuk mendapatkan daftar anggota yang berhak mewakili keluarga dalam arisan.
+ * Aturan:
+ * 1. Hanya 1 perwakilan per pasangan (KK).
+ * 2. Prioritaskan anggota Trah (garis keturunan).
+ * 3. Jika anggota Trah wafat, pasangannya (menantu) bisa menggantikan.
+ * 4. Jika keduanya wafat, tidak ada yang ditampilkan.
+ * 5. Anggota yang belum menikah (tidak punya pasangan) dianggap sebagai perwakilan.
+ */
+function getKandidatArisan() {
+    const kandidat = [];
+    const processedIds = new Set();
+    const allMembers = window.semuaAnggota || [];
+
+    for (const member of allMembers) {
+        if (processedIds.has(member.id) || member.status !== 'aktif') {
+            continue;
+        }
+
+        const isTrah = (p) => !(p.spouseId || p.idPasangan) || (p.parentId || p.idOrangTua || String(p.generasi) === '0');
+        const spouseId = member.spouseId || member.idPasangan;
+
+        if (spouseId) {
+            const spouse = allMembers.find(s => String(s.id) === String(spouseId));
+            
+            // Tentukan siapa yang Trah dan siapa yang bukan
+            const trahMember = isTrah(member) ? member : (spouse && isTrah(spouse) ? spouse : member);
+            const nonTrahMember = spouse && trahMember.id === member.id ? spouse : member;
+
+            let memberToShow = null;
+            if (!trahMember.wafat) {
+                memberToShow = trahMember;
+            } else if (nonTrahMember && !nonTrahMember.wafat) {
+                memberToShow = nonTrahMember;
+            }
+
+            if (memberToShow) kandidat.push(memberToShow);
+
+            processedIds.add(member.id);
+            if (spouse) processedIds.add(spouse.id);
+        } else if (!member.wafat) { // Anggota lajang
+            kandidat.push(member);
+            processedIds.add(member.id);
+        }
+    }
+    return kandidat;
+}
+
 function renderPesertaDropdown() {
     const sel = document.getElementById("select-anggota");
     if (!sel) return;
     sel.innerHTML = '<option value="">-- Pilih Anggota Keluarga --</option>';
     
-    // Filter: Hanya anggota yang sudah menikah (punya spouseId atau dijadikan pasangan)
-    // Aturan: Hanya 1 per pasangan - jika trah hidup tampilkan trah, jika trah wafat tampilkan pasangan
-    // Jika kedua pasangan sudah wafat, jangan tampilkan sama sekali
-    const marriedMembers = [];
-    const processedCouples = new Set();
-    
-    semuaAnggota.forEach(m => {
-        const sId = m.spouseId || m.idPasangan;
-        const coupleKey = sId ? [String(m.id), String(sId)].sort().join('|') : null;
-        
-        if (coupleKey && !processedCouples.has(coupleKey)) {
-            processedCouples.add(coupleKey);
-            
-            // Cari pasangan
-            const spouse = semuaAnggota.find(s => 
-                (sId && String(s.id) === String(sId)) || 
-                (String(s.spouseId || s.idPasangan) === String(m.id))
-            );
-            
-            if (spouse) {
-                // Cek apakah minimal satu dari pasangan masih hidup
-                const bothDead = m.wafat && spouse.wafat;
-                if (bothDead) return; // Jangan tampilkan jika keduanya sudah wafat
-                
-                // Tentukan siapa yang ditampilkan
-                // Prioritaskan anggota trah. Jika trah wafat, tampilkan pasangannya.
-                const trahMember = (m.parentId || m.idOrangTua || String(m.generasi) === '0') ? m : spouse;
-                const nonTrahMember = trahMember.id === m.id ? spouse : m;
-                
-                let memberToShow;
-                if (trahMember && !trahMember.wafat) {
-                    memberToShow = trahMember;
-                } else if (nonTrahMember && !nonTrahMember.wafat) {
-                    memberToShow = nonTrahMember;
-                } else {
-                    memberToShow = null; // Keduanya wafat
-                }
-                
-                if (memberToShow) {
-                    marriedMembers.push(memberToShow);
-                }
-            }
-        }
-    });
-    
-    marriedMembers.sort((a, b) => a.nama.localeCompare(b.nama)).forEach(m => {
+    const kandidat = getKandidatArisan();
+
+    kandidat.sort((a, b) => a.nama.localeCompare(b.nama)).forEach(m => {
         const opt = document.createElement("option");
         opt.value = m.id;
         opt.textContent = m.nama + (m.ikutArisan ? " ✦" : "");
@@ -833,23 +948,33 @@ window.renderPesertaDropdown = renderPesertaDropdown;
 function renderPenerimaDropdown() {
     const sel = document.getElementById("winner-id");
     if (!sel) return;
-    sel.innerHTML = '<option value="">-- Pilih Penerima --</option>';
 
-    // Ambil daftar ID anggota yang sudah pernah menang dari riwayat jadwal
+    // 1. Ambil daftar ID anggota yang sudah pernah menang
     const sudahMenangIds = (window.storageArisan.jadwal || []).map(item => String(item.penerimaId));
 
-    window.semuaAnggota.filter(m => {
-        // Hanya anggota aktif, belum wafat, dan bertipe 'pokok' yang berhak masuk daftar kocokan
-        const isEligible = !m.wafat && m.status === 'aktif' && m.tipeArisan === 'pokok';
+    // 2. Dapatkan semua kandidat yang berhak mewakili keluarga
+    const kandidatArisan = getKandidatArisan();
+
+    // 3. Filter lagi: hanya yang ikut arisan pokok DAN belum menang
+    const kandidatFinal = kandidatArisan.filter(m => {
+        const ikutArisanPokok = m.iuranKomponen?.arisan === true;
         const belumMenang = !sudahMenangIds.includes(String(m.id));
-        return isEligible && belumMenang;
-    })
-    .sort((a, b) => a.nama.localeCompare(b.nama)).forEach(m => {
-        const opt = document.createElement("option");
-        opt.value = m.id;
-        opt.textContent = m.nama;
-        sel.appendChild(opt);
+        return ikutArisanPokok && belumMenang;
     });
+
+    if (kandidatFinal.length > 0) {
+        sel.innerHTML = '<option value="">-- Pilih Penerima --</option>';
+        kandidatFinal
+            .sort((a, b) => a.nama.localeCompare(b.nama))
+            .forEach(m => {
+                const opt = document.createElement("option");
+                opt.value = m.id;
+                opt.textContent = m.nama;
+                sel.appendChild(opt);
+            });
+    } else {
+        sel.innerHTML = '<option value="">-- Semua anggota pokok sudah menang --</option>';
+    }
 }
 window.renderPenerimaDropdown = renderPenerimaDropdown;
 
@@ -997,8 +1122,23 @@ function renderSiklusReport() {
     if (document.getElementById('val-cycle-done')) document.getElementById('val-cycle-done').textContent = winners.length;
     if (document.getElementById('val-cycle-todo')) document.getElementById('val-cycle-todo').textContent = todo.length;
     
-    const tbody = document.getElementById('body-report-siklus');
-    if (tbody) tbody.innerHTML = todo.map(m => `<tr><td>${m.nama}</td><td style="font-family:'Outfit'; font-size:0.7rem"><span class="status-pill status-pokok">Pokok</span></td></tr>`).join('');
+    const tbodyAntrian = document.getElementById('body-report-siklus-antrian');
+    if (tbodyAntrian) {
+        if (todo.length > 0) {
+            tbodyAntrian.innerHTML = todo.map(m => `<tr><td>${m.nama}</td><td style="font-family:'Outfit'; font-size:0.7rem"><span class="status-pill status-pokok">Pokok</span></td></tr>`).join('');
+        } else {
+            tbodyAntrian.innerHTML = `<tr><td colspan="2" class="kosong-info" style="padding:1.5rem">Semua anggota pokok sudah menang.</td></tr>`;
+        }
+    }
+
+    const tbodyPemenang = document.getElementById('body-report-siklus-pemenang');
+    if (tbodyPemenang) {
+        if (listJadwal.length > 0) {
+            tbodyPemenang.innerHTML = [...listJadwal].sort((a, b) => b.periode.localeCompare(a.periode)).map(item => `<tr><td>${item.periode}</td><td><strong>${item.penerimaNama}</strong></td><td>${item.rumah}</td></tr>`).join('');
+        } else {
+            tbodyPemenang.innerHTML = `<tr><td colspan="3" class="kosong-info" style="padding:1.5rem">Belum ada riwayat pemenang.</td></tr>`;
+        }
+    }
 }
 
 function renderPesertaTable() {
@@ -1463,19 +1603,22 @@ function renderPayChecklist() {
         const paid = saved.paid || false;
         const hadir = saved.hadir || false;
         const metode = saved.metodeBayar || "cash";
+        const bukti = saved.buktiTransfer || null;
+        const paymentTime = saved.time ? new Date(saved.time).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-';
+        const overrideNominal = saved.overrideNominal || {};
 
         const komponen = p.iuranKomponen || { arisan:false, sosial:false, tabungan:false };
         const nominal = p.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
 
-        let totalNominal = 0;
-        if (komponen.arisan) totalNominal += nominal.arisan || 55000;
-        if (komponen.sosial) totalNominal += nominal.sosial || 40000;
-        if (komponen.tabungan) totalNominal += nominal.tabungan || 5000;
+        const nomArisan = komponen.arisan ? (overrideNominal.arisan ?? (nominal.arisan || 55000)) : 0;
+        const nomSosial = komponen.sosial ? (overrideNominal.sosial ?? (nominal.sosial || 40000)) : 0;
+        const nomTabungan = komponen.tabungan ? (overrideNominal.tabungan ?? (nominal.tabungan || 5000)) : 0;
+        let totalNominal = nomArisan + nomSosial + nomTabungan;
 
         if (paid) {
-            if (komponen.arisan) totalArisan += nominal.arisan || 55000;
-            if (komponen.sosial) totalSosial += nominal.sosial || 40000;
-            if (komponen.tabungan) totalTabungan += nominal.tabungan || 5000;
+            if (komponen.arisan) totalArisan += nomArisan;
+            if (komponen.sosial) totalSosial += nomSosial;
+            if (komponen.tabungan) totalTabungan += nomTabungan;
             grandTotalTerbayar += totalNominal;
         }
 
@@ -1505,38 +1648,35 @@ function renderPayChecklist() {
         // LOGIKA BARU: Tentukan status bayar berdasarkan tipe anggota
         let statusBayarHtml = '';
         if (paid) {
-            statusBayarHtml = `<span class="status-indicator lunas"></span>`;
+            statusBayarHtml = `<span style="color: var(--accent-green); font-weight: 600;">Lunas</span>`;
         } else {
             if (p.tipeArisan === 'pokok') {
-                statusBayarHtml = `<span class="status-indicator belum"></span>`;
+                statusBayarHtml = `<span style="color: var(--accent-red); font-weight: 600;">Belum</span>`;
             } else {
-                statusBayarHtml = `<span class="status-indicator opsional"></span>`;
+                statusBayarHtml = `<span style="color: var(--text-muted);">Opsional</span>`;
             }
         }
 
-        const nominalText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalNominal);
+        const fmt = (n) => n > 0 ? new Intl.NumberFormat('id-ID').format(n) : '-';
         const isNonPokok = p.tipeArisan === 'non-pokok';
+        const metodeText = paid ? (metode.charAt(0).toUpperCase() + metode.slice(1)) : '-';
+        const buktiHtml = (metode === 'transfer' && bukti) ? `<button class="btn-sm" style="font-size:0.6rem; padding:3px 6px;" onclick="window.lihatBuktiPembayaran('${p.id}', '${periode}')">Lihat</button>` : '-';
+        const hadirText = hadir ? 'Hadir' : 'Tidak';
         return `
             <tr>
-                <td class="${isNonPokok ? 'non-pokok-row' : ''}" style="font-weight:600; vertical-align:middle; line-height:1.4; padding-top:10px; padding-bottom:10px;">${displayName}</td>
-                <td class="${isNonPokok ? 'non-pokok-row' : ''}" style="text-align:right; vertical-align:middle;">${nominalText}</td>
-                <td style="text-align:center; vertical-align:middle;"><input type="checkbox" class="hadir-chk" data-member="${p.id}" ${hadir ? 'checked' : ''}></td>
-                <td style="text-align:center; vertical-align:middle;"><input type="checkbox" class="pay-chk" data-member="${p.id}" ${paid ? 'checked' : ''}> ${statusBayarHtml}</td>
-                <td style="vertical-align:middle;">
-                    <select class="form-control metode-bayar" style="font-size:0.7rem; padding:4px 8px; margin:0; height: auto; min-width: auto; color: var(--text-dark); border-color: var(--border); background: #f8fafc;">
-                        <option value="cash" ${metode === 'cash' ? 'selected' : ''}>Cash</option>
-                        <option value="transfer" ${metode === 'transfer' ? 'selected' : ''}>Transfer</option>
-                        <option value="titip" ${metode === 'titip' ? 'selected' : ''}>Titip</option>
-                    </select>
-                </td>
+                <td onclick="window.bukaModalEditPembayaran('${p.id}')" class="${isNonPokok ? 'non-pokok-row' : ''}" style="font-weight:600; vertical-align:middle; line-height:1.4; padding-top:10px; padding-bottom:10px; cursor:pointer; text-decoration:underline; color:var(--primary);">${displayName}</td>
+                <td style="vertical-align:middle; text-align:center; font-size:0.75rem;">${paid ? paymentTime : '-'}</td>
+                <td style="text-align:center; vertical-align:middle;">${statusBayarHtml}</td>
+                <td style="text-align:center; vertical-align:middle;">${hadirText}</td>
+                <td style="text-align:center; vertical-align:middle; text-transform:capitalize;">${metodeText}</td>
+                <td style="text-align:center; vertical-align:middle;">${buktiHtml}</td>
+                <td style="text-align:right; vertical-align:middle;">${fmt(nomArisan)}</td>
+                <td style="text-align:right; vertical-align:middle;">${fmt(nomSosial)}</td>
+                <td style="text-align:right; vertical-align:middle;">${fmt(nomTabungan)}</td>
+                <td style="text-align:right; vertical-align:middle; font-weight:600;">${fmt(totalNominal)}</td>
             </tr>`;
     }).join('');
     tbody.innerHTML = rows;
-
-    // Tambahkan event listener ke checkbox payment
-    document.querySelectorAll('.pay-chk').forEach(chk => {
-        chk.addEventListener('change', handlePaymentToggle);
-    });
 
     const fmt = n => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     const pokokEl = document.getElementById('total-pokok');
@@ -1555,29 +1695,13 @@ function renderPayChecklist() {
 window.renderPayChecklist = renderPayChecklist;
 
 function getPeriodeFromSelectors(prefix) {
-    // prefix: 'pay', 'jadwal', or 'expense'
+    // prefix: 'pay', 'jadwal', or 'exp'
     const mEl = document.getElementById(`${prefix}-month`);
     const yEl = document.getElementById(`${prefix}-year`);
     if (!mEl || !yEl || !mEl.value || !yEl.value) return '';
     const mm = String(mEl.value).padStart(2, '0');
     const yy = String(yEl.value);
     return `${yy}-${mm}`;
-}
-
-function getCurrentPaymentPeriode() {
-    return getPeriodeFromSelectors('pay') || getPeriodeFromSelectors('jadwal');
-}
-
-function getPaymentStatusForMember(memberId) {
-    const periode = getCurrentPaymentPeriode();
-    window.storageArisan.iuran_bulanan = window.storageArisan.iuran_bulanan || [];
-    const entri = window.storageArisan.iuran_bulanan.find(e => e.periode === periode);
-    if (entri && Array.isArray(entri.pembayaran)) {
-        const pembayaran = entri.pembayaran.find(p => String(p.memberId) === String(memberId));
-        if (pembayaran) return pembayaran.paid ? 'sudah' : 'belum';
-    }
-    const member = window.semuaAnggota.find(m => String(m.id) === String(memberId));
-    return member && member.statusArisan === 'sudah' ? 'sudah' : 'belum';
 }
 
 function populatePeriodeSelectors() {
@@ -1588,8 +1712,8 @@ function populatePeriodeSelectors() {
     for (let y = 2021; y <= currentYear + 10; y++) years.push(y);
 
     ['pay','jadwal','exp'].forEach(prefix => {
-        const mEl = document.getElementById(`${prefix}-month`); // Perbaikan ID
-        const yEl = document.getElementById(`${prefix}-year`);   // Perbaikan ID
+        const mEl = document.getElementById(`${prefix}-month`);
+        const yEl = document.getElementById(`${prefix}-year`);
         if (!mEl || !yEl) return;
         mEl.innerHTML = '<option value="">-bulan-</option>';
         monthNames.forEach((num, idx) => {
@@ -1612,155 +1736,6 @@ function populatePeriodeSelectors() {
     renderExpenseTable();
 }
 window.populatePeriodeSelectors = populatePeriodeSelectors;
-
-function handlePaymentToggle(e) {
-    let currentTotal = 0, totalArisan = 0, totalSosial = 0, totalTabungan = 0;
-    const rows = Array.from(document.querySelectorAll('#pay-tbody tr'));
-    
-    rows.forEach(row => {
-        const payChk = row.querySelector('.pay-chk');
-        if (!payChk) return;
-        
-        const memberId = payChk.getAttribute('data-member');
-        const p = window.semuaAnggota.find(m => String(m.id) === String(memberId));
-        if (!p) return;
-
-        const komponen = p.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
-        const nominal = p.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
-
-        // Hitung total jika checkbox dicentang
-        if (payChk.checked) {
-            let pTotal = 0;
-            if (komponen.arisan) { 
-                totalArisan += nominal.arisan || 55000; 
-                pTotal += nominal.arisan || 55000; 
-            }
-            if (komponen.sosial) { 
-                totalSosial += nominal.sosial || 40000; 
-                pTotal += nominal.sosial || 40000; 
-            }
-            if (komponen.tabungan) { 
-                totalTabungan += nominal.tabungan || 5000; 
-                pTotal += nominal.tabungan || 5000; 
-            }
-            currentTotal += pTotal;
-        }
-
-        // Update status badge secara real-time
-        const statusCell = row.cells[3];
-        if (statusCell) {
-            // Cari indikator yang sudah ada
-            const indicator = statusCell.querySelector('.status-indicator');
-            
-            if (indicator) {
-                // Simpan state checkbox saat ini
-                const isChecked = payChk.checked;
-                
-                // Update class indikator yang sudah ada
-                indicator.className = 'status-indicator';
-                if (isChecked) {
-                    indicator.classList.add('lunas');
-                } else {
-                    if (p.tipeArisan === 'pokok') {
-                        indicator.classList.add('belum');
-                    } else {
-                        indicator.classList.add('opsional');
-                    }
-                }
-                
-                // Pastikan checkbox state tetap benar
-                payChk.checked = isChecked;
-            }
-        }
-    });
-
-    // Update summary labels
-    const fmt = n => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
-    if(document.getElementById('total-pokok')) document.getElementById('total-pokok').textContent = fmt(totalArisan);
-    if(document.getElementById('total-sosial')) document.getElementById('total-sosial').textContent = fmt(totalSosial);
-    if(document.getElementById('total-tabungan')) document.getElementById('total-tabungan').textContent = fmt(totalTabungan);
-    if(document.getElementById('total-wajib')) document.getElementById('total-wajib').textContent = fmt(currentTotal);
-}
-window.handlePaymentToggle = handlePaymentToggle;
-
-window.toggleAllPayments = function(setChecked) {
-    document.querySelectorAll('#pay-tbody input.pay-chk, #pay-tbody input.hadir-chk').forEach(cb => cb.checked = !!setChecked);
-    handlePaymentToggle();
-}
-
-function savePresensi() {
-    // Fungsi ini dipanggil dari tombol "Simpan Presensi & Iuran"
-    // Kita arahkan ke logika savePayments
-    savePayments();
-    showToast("Data presensi dan iuran berhasil disimpan.", "success", 1200);
-}
-window.savePresensi = savePresensi;
-
-async function savePayments() {
-    const periode = getPeriodeFromSelectors('pay') || getPeriodeFromSelectors('jadwal');
-    if (!periode) { alert('Pilih periode terlebih dahulu.'); return; }
-
-    const rows = Array.from(document.querySelectorAll('#pay-tbody tr'));
-    const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
-
-    const pembayaran = rows.map(row => {
-        const payChk = row.querySelector('.pay-chk');
-        const hadirChk = row.querySelector('.hadir-chk');
-        const metodeSel = row.querySelector('.metode-bayar');
-        const mId = payChk.getAttribute('data-member');
-        return {
-            memberId: mId,
-            paid: payChk.checked,
-            hadir: hadirChk.checked,
-            metodeBayar: metodeSel.value,
-            time: payChk.checked ? Date.now() : null,
-        };
-    });
-
-    // SINKRONISASI KE BUKU BESAR (TRANSAKSI)
-    // Hapus semua entri lama untuk periode ini terlebih dahulu
-    const originIdPrefix = `iuran_${periode.replace('-', '_')}`;
-    const trxSnap = await get(ref(db, "transaksi"));
-    if (trxSnap.exists()) {
-        const trxData = trxSnap.val();
-        const promises = [];
-        for (const trxId in trxData) {
-            if (trxData[trxId].originId && trxData[trxId].originId.startsWith(originIdPrefix)) {
-                promises.push(remove(ref(db, `transaksi/${trxId}`)));
-            }
-        }
-        await Promise.all(promises);
-    }
-
-    // Buat entri baru berdasarkan status checkbox saat ini
-    for (const p of pembayaran) {
-        if (p.paid) {
-            const m = window.semuaAnggota.find(mem => String(mem.id) === String(p.memberId));
-            if (!m) continue;
-            const nom = m.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
-            const kom = m.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
-            const deskripsi = `[IURAN] Periode ${periode} - ${m.nama}`;
-            const pOriginId = `${originIdPrefix}_${m.id}`;
-
-            if (kom.arisan && nom.arisan > 0) await set(push(ref(db, "transaksi")), { tanggal: `${periode}-01`, deskripsi: `${deskripsi} (Arisan)`, jumlah: nom.arisan, kategori: 'Kas', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${pOriginId}_arisan` });
-            if (kom.sosial && nom.sosial > 0) await set(push(ref(db, "transaksi")), { tanggal: `${periode}-01`, deskripsi: `${deskripsi} (Sosial)`, jumlah: nom.sosial, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${pOriginId}_sosial` });
-            if (kom.tabungan && nom.tabungan > 0) await set(push(ref(db, "transaksi")), { tanggal: `${periode}-01`, deskripsi: `${deskripsi} (Tabungan)`, jumlah: nom.tabungan, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${pOriginId}_tabungan` });
-        }
-    }
-
-    // Simpan status pembayaran ke arisan_global
-    window.storageArisan.iuran_bulanan = window.storageArisan.iuran_bulanan || [];
-    const idx = window.storageArisan.iuran_bulanan.findIndex(e => e.periode === periode);
-    const entri = { periode, pembayaran };
-    if (idx === -1) window.storageArisan.iuran_bulanan.unshift(entri); else window.storageArisan.iuran_bulanan[idx] = entri;
-
-    await set(ref(db, "arisan_global"), window.storageArisan);
-
-    window.renderPesertaTable();
-    window.renderPayChecklist();
-    window.renderIuranHistory();
-    showToast('Status pembayaran disimpan.', 'success', 1200);
-}
 
 window.resetSemuaDataArisan = async function() {
     if (!confirm('PERINGATAN: Ini akan menghapus seluruh riwayat kocokan, iuran, dan pengeluaran. Pengaturan tipe anggota (Pokok/Non-Pokok) akan TETAP dipertahankan agar Anda tidak perlu input ulang. Lanjutkan?')) return;
@@ -1854,6 +1829,221 @@ window.simpanAturan = async function() {
     window.batalEditAturan();
 };
 
+window.bukaModal = function(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.add('aktif');
+};
+
+window.tutupModal = function(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.remove('aktif');
+};
+
+window.bukaModalEditPembayaran = function(memberId) {
+    const periode = getPeriodeFromSelectors('pay');
+    if (!periode) {
+        showToast("Pilih periode terlebih dahulu.", "error");
+        return;
+    }
+
+    const member = window.semuaAnggota.find(m => String(m.id) === String(memberId));
+    if (!member) {
+        showToast("Data anggota tidak ditemukan.", "error");
+        return;
+    }
+
+    // Find existing payment data for this period
+    const iuranBulanIni = (window.storageArisan.iuran_bulanan || []).find(e => e.periode === periode);
+    const savedPayment = iuranBulanIni ? (iuranBulanIni.pembayaran || []).find(p => String(p.memberId) === String(memberId)) || {} : {};
+
+    // Populate modal fields
+    document.getElementById('edit-iuran-nama').textContent = member.panggilan || member.nama;
+    document.getElementById('edit-iuran-member-id').value = memberId;
+    document.getElementById('edit-iuran-periode').value = periode;
+    document.getElementById('edit-iuran-tanggal').value = new Date().toISOString().split('T')[0];
+    document.getElementById('edit-iuran-metode').value = (savedPayment && savedPayment.metodeBayar) || 'cash';
+    document.getElementById('edit-iuran-hadir').checked = savedPayment.hadir || false;
+
+    // Handle bukti transfer
+    document.getElementById('edit-iuran-bukti-base64').value = savedPayment.buktiTransfer || '';
+    const previewImg = document.getElementById('preview-bukti-img');
+    previewImg.src = savedPayment.buktiTransfer || '';
+    document.getElementById('preview-bukti-container').style.display = savedPayment.buktiTransfer ? 'block' : 'none';
+    document.getElementById('btn-hapus-bukti-transfer').style.display = savedPayment.buktiTransfer ? 'inline-block' : 'none';
+
+    const defaultKomponen = member.iuranKomponen || {};
+    const defaultNominal = member.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+    const overrideNominal = savedPayment.overrideNominal || {};
+
+    // Arisan Pokok
+    const divArisan = document.getElementById('komponen-arisan-pokok');
+    if (defaultKomponen.arisan) {
+        divArisan.style.display = 'block';
+        const nominalArisan = defaultNominal.arisan || 55000;
+        document.getElementById('edit-iuran-nominal-arisan').value = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(nominalArisan);
+    } else {
+        divArisan.style.display = 'none';
+    }
+
+    // Dana Sosial
+    const divSosial = document.getElementById('komponen-dana-sosial');
+    const chkSosial = document.getElementById('edit-iuran-chk-sosial');
+    const nomSosial = document.getElementById('edit-iuran-nominal-sosial');
+    if (defaultKomponen.sosial) {
+        divSosial.style.display = 'block';
+        chkSosial.checked = overrideNominal.sosial !== 0;
+        nomSosial.value = overrideNominal.sosial ?? (defaultNominal.sosial || 40000);
+        nomSosial.disabled = !chkSosial.checked;
+    } else {
+        divSosial.style.display = 'none';
+        chkSosial.checked = false;
+        nomSosial.value = '';
+    }
+
+    // Tabungan
+    const divTabungan = document.getElementById('komponen-tabungan');
+    const chkTabungan = document.getElementById('edit-iuran-chk-tabungan');
+    const nomTabungan = document.getElementById('edit-iuran-nominal-tabungan');
+    if (defaultKomponen.tabungan) {
+        divTabungan.style.display = 'block';
+        chkTabungan.checked = overrideNominal.tabungan !== 0;
+        nomTabungan.value = overrideNominal.tabungan ?? (defaultNominal.tabungan || 5000);
+        nomTabungan.disabled = !chkTabungan.checked;
+    } else {
+        divTabungan.style.display = 'none';
+        chkTabungan.checked = false;
+        nomTabungan.value = '';
+    }
+
+    // Toggle visibility of bukti transfer input based on metode
+    const metodeSelect = document.getElementById('edit-iuran-metode');
+    const grupBukti = document.getElementById('grup-bukti-transfer');
+    grupBukti.style.display = metodeSelect.value === 'transfer' ? 'block' : 'none';
+    metodeSelect.onchange = () => {
+        grupBukti.style.display = metodeSelect.value === 'transfer' ? 'block' : 'none';
+    };
+
+    window.bukaModal('modal-edit-pembayaran');
+}
+
+window.simpanEditPembayaran = async function() {
+    const memberId = document.getElementById('edit-iuran-member-id').value;
+    const periode = document.getElementById('edit-iuran-periode').value;
+    const tanggal = document.getElementById('edit-iuran-tanggal').value;
+    const metode = document.getElementById('edit-iuran-metode').value;
+    const hadir = document.getElementById('edit-iuran-hadir').checked;
+    const bukti = document.getElementById('edit-iuran-bukti-base64').value;
+
+    const member = window.semuaAnggota.find(m => String(m.id) === String(memberId));
+    if (!member) return showToast("Gagal menyimpan, anggota tidak ditemukan.", "error");
+
+    const defaultKomponen = member.iuranKomponen || {};
+    const defaultNominal = member.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+
+    const override = {};
+    let isPaid = false;
+
+    if (defaultKomponen.arisan) {
+        override.arisan = defaultNominal.arisan || 55000;
+        isPaid = true;
+    }
+
+    const chkSosial = document.getElementById('edit-iuran-chk-sosial');
+    if (defaultKomponen.sosial) {
+        override.sosial = chkSosial.checked ? (parseInt(document.getElementById('edit-iuran-nominal-sosial').value) || 0) : 0;
+        if (chkSosial.checked && override.sosial < (defaultNominal.sosial || 40000)) return showToast(`Nominal sosial tidak boleh kurang dari standar (Rp ${defaultNominal.sosial || 40000})`, "error");
+        if (chkSosial.checked) isPaid = true;
+    }
+
+    const chkTabungan = document.getElementById('edit-iuran-chk-tabungan');
+    if (defaultKomponen.tabungan) {
+        override.tabungan = chkTabungan.checked ? (parseInt(document.getElementById('edit-iuran-nominal-tabungan').value) || 0) : 0;
+        if (chkTabungan.checked && override.tabungan < (defaultNominal.tabungan || 5000)) return showToast(`Nominal tabungan tidak boleh kurang dari standar (Rp ${defaultNominal.tabungan || 5000})`, "error");
+        if (chkTabungan.checked) isPaid = true;
+    }
+
+    window.storageArisan.iuran_bulanan = window.storageArisan.iuran_bulanan || [];
+    let iuranBulanIni = window.storageArisan.iuran_bulanan.find(e => e.periode === periode);
+    if (!iuranBulanIni) { iuranBulanIni = { periode, pembayaran: [] }; window.storageArisan.iuran_bulanan.push(iuranBulanIni); }
+    let paymentEntry = (iuranBulanIni.pembayaran || []).find(p => String(p.memberId) === String(memberId));
+    if (!paymentEntry) { paymentEntry = { memberId }; iuranBulanIni.pembayaran.push(paymentEntry); }
+
+    Object.assign(paymentEntry, { paid: isPaid, hadir: hadir, metodeBayar: metode, buktiTransfer: bukti, time: new Date(tanggal).getTime(), overrideNominal: override });
+
+    await set(ref(db, "arisan_global"), window.storageArisan);
+    
+    // Sync to ledger
+    const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
+    const periodeId = periode.replace(/-/g, '_');
+    const originIdPrefix = `iuran_${periodeId}_${memberId}`;
+
+    const trxSnap = await get(ref(db, "transaksi"));
+    if (trxSnap.exists()) {
+        const allTrx = Object.entries(trxSnap.val());
+        for (const [trxId, trx] of allTrx) { if (trx.originId && trx.originId.startsWith(originIdPrefix)) { await remove(ref(db, `transaksi/${trxId}`)); } }
+    }
+    if (isPaid) {
+        const deskripsi = `[IURAN] Periode ${periode} - ${member.nama}`;
+        const paymentDate = new Date(paymentEntry.time).toISOString().split('T')[0];
+        if (override.arisan > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Arisan)`, jumlah: override.arisan, kategori: 'Kas', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_arisan` });
+        if (override.sosial > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Sosial)`, jumlah: override.sosial, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_sosial` });
+        if (override.tabungan > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Tabungan)`, jumlah: override.tabungan, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_tabungan` });
+    }
+
+    window.tutupModal('modal-edit-pembayaran');
+    showToast("Perubahan iuran berhasil disimpan.", "success");
+    renderPayChecklist();
+}
+
+window.prosesUploadBuktiTransfer = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      const max = 800;
+      if (width > height && width > max) { height *= max / width; width = max; }
+      else if (height > max) { width *= max / height; height = max; }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('edit-iuran-bukti-base64').value = dataUrl;
+      document.getElementById('preview-bukti-img').src = dataUrl;
+      document.getElementById('preview-bukti-container').style.display = 'block';
+      document.getElementById('btn-hapus-bukti-transfer').style.display = 'inline-block';
+      showToast("Bukti berhasil diproses.", "success");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.hapusFotoBuktiTransfer = function() {
+  document.getElementById('edit-iuran-bukti-base64').value = '';
+  document.getElementById('input-bukti-transfer').value = '';
+  document.getElementById('preview-bukti-img').src = '';
+  document.getElementById('preview-bukti-container').style.display = 'none';
+  document.getElementById('btn-hapus-bukti-transfer').style.display = 'none';
+  showToast("Foto bukti dihapus.", "success");
+};
+
+window.lihatBuktiPembayaran = function(memberId, periode) {
+    const iuranBulanIni = (window.storageArisan.iuran_bulanan || []).find(e => e.periode === periode);
+    if (!iuranBulanIni) return showToast("Data iuran untuk periode ini tidak ditemukan.", "error");
+
+    const payment = (iuranBulanIni.pembayaran || []).find(p => String(p.memberId) === String(memberId));
+    if (payment && payment.buktiTransfer) {
+        document.getElementById('img-bukti-view').src = payment.buktiTransfer;
+        window.bukaModal('modal-lihat-bukti');
+    } else {
+        showToast("Bukti transfer tidak ditemukan untuk anggota ini.", "error");
+    }
+};
 // Listener untuk navigasi tombol back di HP / Browser
 window.addEventListener('popstate', (e) => {
     const panelId = (e.state && e.state.panel) ? e.state.panel : 'panel-arisan-menu';

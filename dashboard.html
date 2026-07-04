@@ -111,6 +111,13 @@
       text-transform: uppercase;
       font-weight: 800;
     }
+    .bagan-jabatan {
+      font-family: 'Inter', sans-serif;
+      margin-bottom: 0;
+      color: var(--text-mid);
+      text-transform: uppercase;
+      font-weight: 800;
+    }
 
     /* --- HIERARCHY CONNECTOR LINES --- */
 
@@ -705,7 +712,7 @@
           <input type="text" id="form-foto" placeholder="Link URL atau data gambar..." style="flex:1"/>
           <button type="button" class="btn-sm solid" onclick="document.getElementById('input-file-foto').click()" style="padding:0 1rem; height:48px; white-space:nowrap; background:var(--em); color:var(--ct); border:none; font-family:'Cinzel'; font-weight:800; font-size:0.7rem; cursor:pointer;">📸 Ambil Foto</button>
         </div>
-        <input type="file" id="input-file-foto" accept="image/*" capture="environment" style="display:none" onchange="window.prosesUploadFoto(this)">
+        <input type="file" id="input-file-foto" accept="image/*" style="display:none" onchange="window.prosesUploadFoto(this)">
         <p style="font-size:0.65rem; color:var(--cb); margin-top:5px; font-style:italic;">* Bisa ambil dari kamera HP atau galeri. Foto akan dikompres otomatis.</p>
       </div>
       </form>
