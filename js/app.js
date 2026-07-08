@@ -21,9 +21,9 @@ const HAK_AKSES = {
 
   admin:    { tambah: true,  edit: true,  hapus: true,  kelolaAkun: true },
 
-  pengurus: { tambah: true,  edit: true,  hapus: false, kelolaAkun: false },
+  pengurus: { tambah: true,  edit: false,  hapus: false, kelolaAkun: false },
 
-  anggota:  { tambah: true,  edit: true, hapus: false, kelolaAkun: false },
+  anggota:  { tambah: true,  edit: false, hapus: false, kelolaAkun: false },
 
   guest:    { tambah: false, edit: false, hapus: false, kelolaAkun: false }
 
@@ -675,10 +675,116 @@ function kartuPeriode(p, nominal) {
 
 }
 
+/**
+ * Helper function to show/hide admin access controls on a member card.
+ * @param {HTMLElement} btn The button element that was clicked.
+ */
+window.toggleAksesDetail = function(btn) {
+    const card = btn.closest('.a-card');
+    if (card) {
+        card.classList.toggle('show-akses');
+        // Prevent the card click from toggling the tree node
+        event.stopPropagation();
+    }
+}
 
+const isMale = (p) => p.gender === 'L' || p.jenisKelamin === 'L' || p.gender === 'Laki-laki' || p.jenisKelamin === 'Laki-laki';
 
-function kartu(anggota) {
+function kartu(anggota, infoPohon = '', data = []) {
+    const isAnggotaMale = isMale(anggota);
+    const genderClass = isAnggotaMale ? 'male' : 'female';
+    const inisial = (anggota.nama || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    const wafatIcon = anggota.kehidupan === 'wafat' ? '🪦 ' : '';
 
+    // START: Nasab (bin/binti) logic
+    let nasabHtml = '';
+    const isTrah = (p) => !!(p.parentId || p.idOrangTua || String(p.generasi) === '0');
+
+    // Apply only to direct descendants, not Gen 0 and not in-laws (menantu)
+    if (data.length > 0 && isTrah(anggota) && String(anggota.generasi) !== '0') {
+        const parentId = anggota.parentId || anggota.idOrangTua;
+        if (parentId) {
+            const parent = data.find(p => String(p.id) === String(parentId));
+            if (parent) {
+                let father = null;
+
+                if (isMale(parent)) {
+                    father = parent;
+                } else {
+                    // The direct parent is the mother. We must find her MALE partner (the father).
+                    const idPasanganDari = (p) => p.spouseId || p.idPasangan;
+                    const mother = parent;
+
+                    // 1. Try finding via mother's spouseId
+                    const spouseId = idPasanganDari(mother);
+                    if (spouseId) {
+                        const potentialFather = data.find(p => String(p.id) === String(spouseId));
+                        if (potentialFather && isMale(potentialFather)) father = potentialFather;
+                    }
+
+                    // 2. If not found, do a reverse lookup for a male who lists the mother as his spouse.
+                    if (!father) father = data.find(p => String(idPasanganDari(p)) === String(mother.id) && isMale(p)) || null;
+                }
+
+                if (father) {
+                    const fatherName = father.panggilan || father.nama.split(' ')[0];
+                    const sebutan = isAnggotaMale ? 'bin' : 'binti';
+                    nasabHtml = `<p class="a-nasab">${sebutan} ${fatherName}</p>`;
+                }
+            }
+        }
+    }
+    // END: Nasab logic
+
+    // Compact info
+    const urutanVal = anggota.urutan || anggota.urutan_anak;
+    const urutanTeks = urutanVal ? `Anak ke-${urutanVal}` : '';
+    const infoTeks = urutanTeks;
+
+    const isTargetPengurus = anggota.level === 'pengurus' || anggota.level === 'admin';
+    const canShowEdit = penggunaLogin?.level === 'admin' || 
+                        penggunaLogin?.level === 'pengurus' ||
+                        (penggunaLogin?.level === 'anggota' && !isTargetPengurus);
+
+    return `
+      <div class="a-card ${genderClass}">
+        <div class="a-avatar">${inisial}</div>
+        <div class="a-card-main">
+            <p class="a-nama">${wafatIcon}${anggota.nama || '-'}</p>
+            ${nasabHtml}
+            <p class="a-panggilan">${anggota.panggilan ? `"${anggota.panggilan}"` : ''}</p>
+            ${infoPohon ? `<p class="a-info-pohon">${infoPohon}</p>` : ''}
+            ${(anggota.hp || anggota.alamat) ? `
+            <div class="a-kontak-info">
+                ${anggota.hp ? `<span>📱 ${anggota.hp}</span>` : ''}
+                ${anggota.alamat ? `<span>📍 ${anggota.alamat}</span>` : ''}
+            </div>
+            ` : ''}
+        </div>
+        <div class="a-card-actions">
+            ${infoTeks ? `<span class="a-info-in-actions">${infoTeks}</span>` : ''}
+            ${canShowEdit ? `<button class="btn-aksi-compact" title="Edit" onclick="event.stopPropagation(); window.bukaEdit('${anggota.id}')">✏️</button>` : ''}
+            ${penggunaLogin?.level === 'admin' ? `<button class="btn-aksi-compact" title="Hapus" onclick="event.stopPropagation(); window.bukaKonfirmasiHapus('${anggota.id}', '${anggota.nama.replace(/'/g, "\\'")}')">🗑️</button>` : ''}
+            ${penggunaLogin?.level === 'admin' ? `<button class="btn-aksi-compact" title="Kelola Akses" onclick="window.toggleAksesDetail(this)">⚙️</button>` : ''}
+        </div>
+        ${penggunaLogin?.level === 'admin' ? `
+          <div class="a-akses-detail">
+            <label>
+              <input type="checkbox" onchange="window.toggleIzinDaftar('${anggota.id}', this.checked)" ${anggota.bolehDaftar ? 'checked' : ''}>
+              Izinkan login
+            </label>
+            <select onchange="window.updateLevelAnggota('${anggota.id}', this.value)" ${!anggota.bolehDaftar ? 'disabled' : ''}>
+              <option value="anggota" ${anggota.level === 'anggota' ? 'selected' : ''}>Anggota</option>
+              <option value="pengurus" ${anggota.level === 'pengurus' ? 'selected' : ''}>Pengurus</option>
+              <option value="admin" ${anggota.level === 'admin' ? 'selected' : ''}>Admin</option>
+            </select>
+          </div>
+        ` : ''}
+      </div>`;
+}
+
+/*
+function kartu_lama(anggota) {
     const isMale = anggota.gender === 'L' || anggota.jenisKelamin === 'L' || anggota.gender === 'Laki-laki' || anggota.jenisKelamin === 'Laki-laki';
 
     const genderClass = isMale ? 'male' : 'female';
@@ -813,8 +919,8 @@ function kartu(anggota) {
         ` : ''}
 
       </div>`;
-
 }
+*/
 
 
 
@@ -1158,6 +1264,256 @@ window.hapusJabatanPengurus = async function(id) {
 
 // 5. UI & RENDER
 
+/**
+ * Bangun HTML satu node pohon keluarga secara rekursif (mirip aplikasi Family Gem):
+ * setiap node berisi kartu orang + kartu pasangannya (jika ada), lengkap dengan
+ * tombol panah untuk membuka daftar anak-anaknya yang juga berupa node pohon.
+ */
+function bangunNodePohon(person, data, renderedIds, openedPohonIds, depth) {
+  if (depth > 15 || renderedIds.has(String(person.id))) {
+    return '';
+  }
+  renderedIds.add(String(person.id));
+
+  const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+  const idOrtuDari = (p) => p.idOrangTua || p.parentId;
+
+  // 1. Find all spouses
+  const sId = idPasanganDari(person);
+  let spouses = data.filter(m => String(m.id) !== String(person.id) && String(idPasanganDari(m)) === String(person.id));
+  if (sId) {
+    const mainSpouse = data.find(m => String(m.id) === String(sId));
+    if (mainSpouse && !spouses.some(s => s.id === mainSpouse.id)) {
+      spouses.push(mainSpouse);
+    }
+  }
+  
+  let childrenHtml = '';
+  let infoPohon = '';
+  let totalAnak = 0;
+
+  // If person is male and has multiple spouses, use the polygamy layout
+  if (isMale(person) && spouses.length > 1) {
+    spouses.forEach(wife => renderedIds.add(String(wife.id)));
+
+    childrenHtml = spouses.map(wife => {
+      // Find children whose biological mother (motherId) is this specific wife.
+      // Fallback ke idOrangTua === id istri untuk data lama yang kebetulan mencatat begitu.
+      const childrenOfWife = data
+        .filter(m => String(m.motherId || '') === String(wife.id) || String(idOrtuDari(m)) === String(wife.id))
+        .sort((a, b) => (parseInt(a.urutan || a.urutan_anak) || 99) - (parseInt(b.urutan || b.urutan_anak) || 99));
+      
+
+      totalAnak += childrenOfWife.length;
+
+      const childrenOfWifeHtml = childrenOfWife.map(c => bangunNodePohon(c, data, renderedIds, openedPohonIds, depth + 1)).join('');
+      
+      return `
+        <div class="pohon-sub-family">
+          <div class="pohon-pasangan-item">
+            <span class="pohon-pasangan-tag">💍 Istri</span>
+            ${kartu(wife, '', data)}
+          </div>
+          ${childrenOfWifeHtml ? `<div class="pohon-children">${childrenOfWifeHtml}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // Anak yang parentId-nya langsung ke ayah TAPI tidak berhasil dipetakan ke ibu manapun
+    // (mis. motherId tidak bisa diinferensikan karena data istri tidak lengkap)
+    const childrenOfFatherDirectly = data
+      .filter(m => String(idOrtuDari(m)) === String(person.id) && !m.motherId)
+      .sort((a, b) => (parseInt(a.urutan || a.urutan_anak) || 99) - (parseInt(b.urutan || b.urutan_anak) || 99));
+    
+    if (childrenOfFatherDirectly.length > 0) {
+        totalAnak += childrenOfFatherDirectly.length;
+        childrenHtml += childrenOfFatherDirectly.map(c => bangunNodePohon(c, data, renderedIds, openedPohonIds, depth + 1)).join('');
+    }
+
+    infoPohon = `${spouses.length} istri & ${totalAnak} anak`;
+
+  } else { // Standard case: one or zero spouses (for both male and female)
+    const spouse = spouses.length > 0 ? spouses[0] : null;
+    if (spouse) renderedIds.add(String(spouse.id));
+
+    const anak = data.filter(m => {
+        const pid = idOrtuDari(m);
+        // Children can be linked to the person OR their one spouse
+        return pid && (String(pid) === String(person.id) || (spouse && String(pid) === String(spouse.id)));
+    }).sort((a, b) => (parseInt(a.urutan || a.urutan_anak) || 99) - (parseInt(b.urutan || b.urutan_anak) || 99));
+    
+    totalAnak = anak.length;
+
+    const childrenNodesHtml = anak.map(c => bangunNodePohon(c, data, renderedIds, openedPohonIds, depth + 1)).join('');
+    
+    const spouseHtml = spouse ? `<div class="pohon-pasangan-item"><span class="pohon-pasangan-tag">💍 Pasangan</span>${kartu(spouse, '', data)}</div>` : '';
+    
+    childrenHtml = spouseHtml + childrenNodesHtml;
+
+    if (totalAnak > 0 && spouse) infoPohon = `pasangan & ${totalAnak} anak`;
+    else if (totalAnak > 0) infoPohon = `${totalAnak} anak`;
+    else if (spouse) infoPohon = 'pasangan';
+  }
+
+  const bisaDibuka = !!childrenHtml.trim();
+  const isTerbuka = openedPohonIds.has(String(person.id));
+
+  return `
+    <div class="pohon-node${isTerbuka ? ' buka' : ''}" data-id="${person.id}">
+      <div class="pohon-induk" onclick="if(!event.target.closest('.a-card-actions') && !event.target.closest('.a-akses-detail') && !event.target.closest('input') && !event.target.closest('select')) this.closest('.pohon-node').classList.toggle('buka')">
+        ${kartu(person, infoPohon, data)}
+        ${bisaDibuka ? `<button type="button" class="pohon-panah" title="Lihat pasangan &amp; anak">
+            <span class="pohon-ikon">▾</span>
+          </button>` : ''}
+      </div>
+      ${bisaDibuka ? `<div class="pohon-children">${childrenHtml}</div>` : ''}
+    </div>`;
+}
+
+/**
+ * Render seluruh data anggota sebagai pohon keluarga bertingkat (gaya Family Gem).
+ * Root pohon = anggota trah generasi 0 (induk keluarga). Anggota yang tidak
+ * terjangkau dari root manapun (data tidak lengkap/rusak) tetap ditampilkan
+ * di bagian "Lainnya" supaya tidak ada data yang hilang dari tampilan.
+ */
+function renderPohonAnggota(data, container, openedPohonIds) {
+  const isTrah = (p) => !!(p.parentId || p.idOrangTua || String(p.generasi) === '0');
+  const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+  const idOrtuDari = (p) => p.idOrangTua || p.parentId;
+
+  // --- Inferensi motherId untuk anak-anak dari keluarga poligami ---
+  // idOrangTua/parentId anak biasanya menunjuk ke AYAH, sehingga tanpa langkah ini
+  // anak-anak tidak bisa dikelompokkan di bawah ibu kandungnya masing-masing.
+  const isFemaleLokal = (p) => p.gender === 'P' || p.jenisKelamin === 'P' || p.gender === 'Perempuan';
+  const fatherChildrenMapPohon = {};
+  data.forEach(a => {
+    if (!a.motherId || a.motherId === '') {
+      const pId = idOrtuDari(a);
+      if (pId) {
+        const parent = data.find(p => String(p.id) === String(pId));
+        if (parent && isMale(parent)) {
+          if (!fatherChildrenMapPohon[pId]) fatherChildrenMapPohon[pId] = [];
+          fatherChildrenMapPohon[pId].push(a);
+        }
+      }
+    } else {
+    }
+  });
+  Object.keys(fatherChildrenMapPohon).forEach(pId => {
+    const children = fatherChildrenMapPohon[pId];
+    const parent = data.find(p => String(p.id) === String(pId));
+    if (!parent) return;
+    const wives = data.filter(w => isFemaleLokal(w) && String(idPasanganDari(w)) === String(parent.id))
+      .sort((a, b) => (parseInt(a.urutan) || 999) - (parseInt(b.urutan) || 999));
+    if (wives.length === 1) {
+      children.forEach(child => { child.motherId = wives[0].id; });
+    } else if (wives.length > 1) {
+      children.sort((a, b) => (parseInt(a.urutan || a.urutan_anak) || 999) - (parseInt(b.urutan || b.urutan_anak) || 999));
+      let wifeIndex = 0;
+      children.forEach(child => {
+        child.motherId = wives[wifeIndex].id;
+        wifeIndex = (wifeIndex + 1) % wives.length;
+      });
+    }
+  });
+  // Jika induk yang tercatat langsung adalah ibu (bukan ayah)
+  data.forEach(a => {
+    if (!a.motherId || a.motherId === '') {
+      const pId = idOrtuDari(a);
+      if (pId) {
+        const parent = data.find(p => String(p.id) === String(pId));
+        if (parent && isFemaleLokal(parent)) a.motherId = parent.id;
+      }
+    }
+  });
+
+  // Cari induk trah dari seorang anggota (menormalkan ke id trah jika parent tercatat adalah menantu)
+  const induklId = (m) => {
+    const pid = idOrtuDari(m);
+    if (!pid) return null;
+    const ortu = data.find(x => String(x.id) === String(pid));
+    if (!ortu) return null;
+    if (!isTrah(ortu)) {
+      const sId = idPasanganDari(ortu);
+      const trahOrtu = data.find(x => String(x.id) === String(sId) && isTrah(x));
+      return trahOrtu ? String(trahOrtu.id) : null;
+    }
+    return String(ortu.id);
+  };
+
+  const rootCandidates = data.filter(p => isTrah(p) && !induklId(p));
+
+  // Kadang pasangan pendiri (Gen 0) sama-sama tercatat tanpa induk (mis. suami & istri
+  // sama-sama generasi 0), sehingga keduanya lolos sebagai "akar" secara terpisah.
+  // Di sini kita pilih hanya SATU sebagai kartu akar (laki-laki diutamakan sebagai
+  // induk trah); pasangannya akan tetap muncul otomatis di dalam node saat dibuka.
+  const dikecualikanSbgAkar = new Set();
+  rootCandidates.forEach(p => {
+    const sId = idPasanganDari(p);
+    let pasangan = sId ? rootCandidates.find(r => String(r.id) === String(sId)) : null;
+    if (!pasangan) {
+      pasangan = rootCandidates.find(r => String(r.id) !== String(p.id) && String(idPasanganDari(r)) === String(p.id)) || null;
+    }
+    if (!pasangan) return; // pasangan bukan kandidat akar (normal, akan nempel via spouse saat dirender)
+
+    const pLaki = isMale(p);
+    const sLaki = isMale(pasangan);
+
+    if (pLaki && !sLaki) {
+      dikecualikanSbgAkar.add(String(pasangan.id));
+    } else if (!pLaki && sLaki) {
+      dikecualikanSbgAkar.add(String(p.id));
+    } else {
+      // Gender sama/tidak diketahui: pertahankan salah satu secara konsisten
+      if (String(p.id) > String(pasangan.id)) dikecualikanSbgAkar.add(String(p.id));
+    }
+  });
+
+  const roots = rootCandidates
+    .filter(p => !dikecualikanSbgAkar.has(String(p.id)))
+    .sort((a, b) => {
+      const ua = parseInt(a.urutan || a.urutan_anak);
+      const ub = parseInt(b.urutan || b.urutan_anak);
+      return (isNaN(ua) ? 99 : ua) - (isNaN(ub) ? 99 : ub);
+    });
+
+  if (!roots.length) {
+    container.innerHTML = '<div class="kosong-info">Data tidak ditemukan.</div>';
+    return;
+  }
+
+  const renderedIds = new Set();
+
+  let html = `
+    <div class="pohon-toolbar">
+      <button type="button" onclick="window.pohonBukaSemua(true)">🔽 Buka Semua</button>
+      <button type="button" onclick="window.pohonBukaSemua(false)">🔼 Tutup Semua</button>
+    </div>
+    <div class="pohon-container">
+      ${roots.map(r => bangunNodePohon(r, data, renderedIds, openedPohonIds, 0)).join('')}
+    </div>`;
+
+  // Tangkap anggota yang belum sempat dirender (data tidak lengkap/rusak) agar tidak hilang
+  const sisa = data.filter(m => !renderedIds.has(String(m.id)));
+  if (sisa.length) {
+    html += `<div class="pohon-lainnya-label"><span>Lainnya (belum terhubung silsilah)</span></div>
+      <div class="pohon-container">
+        ${sisa.map(m => bangunNodePohon(m, data, renderedIds, openedPohonIds, 0)).join('')}
+      </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+/**
+ * Buka atau tutup seluruh node pohon keluarga sekaligus.
+ */
+window.pohonBukaSemua = function(buka) {
+  document.querySelectorAll('#daftar-anggota .pohon-node').forEach(node => {
+    node.classList.toggle('buka', buka);
+  });
+};
+
 window.renderAnggota = async function() {
 
   const data = await window.ambilData();
@@ -1173,6 +1529,20 @@ window.renderAnggota = async function() {
     const id = cardStack.getAttribute('data-anggota-id');
 
     if (id) openedStackIds.add(id);
+
+  });
+
+
+
+  // SIMPAN STATE NODE POHON KELUARGA YANG SEDANG TERBUKA (sebelum render ulang)
+
+  const openedPohonIds = new Set();
+
+  document.querySelectorAll('.pohon-node.buka').forEach(node => {
+
+    const id = node.getAttribute('data-id');
+
+    if (id) openedPohonIds.add(id);
 
   });
 
@@ -1395,6 +1765,30 @@ window.renderAnggota = async function() {
 
 
 
+  // ============================================================
+
+  // MODE POHON KELUARGA (gaya Family Gem): kartu induk diklik -> muncul
+
+  // pasangan & anak-anaknya; anak diklik -> muncul pasangan & anak-anaknya
+
+  // lagi, begitu seterusnya secara bertingkat.
+
+  // Mode ini dipakai saat filter "Semua" aktif dan tidak sedang mencari,
+
+  // supaya tombol filter Gen 0-7 / Wafat tetap memakai tampilan lama.
+
+  // ============================================================
+
+  if (filterAktif === 'semua' && !cari) {
+
+    renderPohonAnggota(data, container, openedPohonIds);
+
+    return;
+
+  }
+
+
+
   // Logika Pengurutan Silsilah (Lineage Sorting)
 
   const getLineageKey = (m) => {
@@ -1524,8 +1918,149 @@ window.renderAnggota = async function() {
     const members = perGen[g];
 
     let lastParentId = null;
+    let lastMotherId = null;
 
     let familyContentHtml = '';
+
+    const isFemale = (p) => p.gender === 'P' || p.jenisKelamin === 'P' || p.gender === 'Perempuan';
+    const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+
+    // Infer motherId for children who don't have it populated
+    // Build a map of fathers to their children (sorted by urutan) for polygamous inference
+    const fatherChildrenMap = {};
+    members.forEach(a => {
+      if (!a.motherId || a.motherId === '') {
+        const pId = a.parentId || a.idOrangTua;
+        if (pId) {
+          const parent = data.find(p => String(p.id) === String(pId));
+          if (parent && isMale(parent)) {
+            if (!fatherChildrenMap[pId]) {
+              fatherChildrenMap[pId] = [];
+            }
+            fatherChildrenMap[pId].push(a);
+          }
+        }
+      }
+    });
+
+    // Process each father's children to assign mothers sequentially
+    Object.keys(fatherChildrenMap).forEach(pId => {
+      const children = fatherChildrenMap[pId];
+      const parent = data.find(p => String(p.id) === String(pId));
+      if (!parent) return;
+
+      // Find wives of this father, sorted by their urutan if available
+      const wives = data.filter(w => {
+        const spouseId = idPasanganDari(w);
+        return isFemale(w) && String(spouseId) === String(parent.id);
+      }).sort((a, b) => {
+        const urutanA = parseInt(a.urutan) || 999;
+        const urutanB = parseInt(b.urutan) || 999;
+        return urutanA - urutanB;
+      });
+
+      console.log('[DEBUG] Father', parent.nama, 'has', wives.length, 'wives:', wives.map(w => w.nama), 'and', children.length, 'children without motherId');
+
+      if (wives.length === 1) {
+        // Only one wife - all children belong to her
+        children.forEach(child => {
+          child.motherId = wives[0].id;
+          console.log('[DEBUG] Inferred motherId for', child.nama, ':', wives[0].nama);
+        });
+      } else if (wives.length > 1) {
+        // Multiple wives - assign children based on birth order (urutan)
+        // Sort children by urutan
+        children.sort((a, b) => {
+          const urutanA = parseInt(a.urutan) || 999;
+          const urutanB = parseInt(b.urutan) || 999;
+          return urutanA - urutanB;
+        });
+
+        // Distribute children among wives sequentially
+        let wifeIndex = 0;
+        children.forEach(child => {
+          child.motherId = wives[wifeIndex].id;
+          console.log('[DEBUG] Assigned', child.nama, 'to mother:', wives[wifeIndex].nama, '(wife', wifeIndex + 1, 'of', wives.length, ')');
+          // Move to next wife for next child (round-robin)
+          wifeIndex = (wifeIndex + 1) % wives.length;
+        });
+      }
+    });
+
+    // Handle cases where parent is mother
+    members.forEach(a => {
+      if (!a.motherId || a.motherId === '') {
+        const pId = a.parentId || a.idOrangTua;
+        if (pId) {
+          const parent = data.find(p => String(p.id) === String(pId));
+          if (parent && isFemale(parent)) {
+            a.motherId = parent.id;
+            console.log('[DEBUG] Parent is mother for', a.nama, ':', parent.nama);
+          }
+        }
+      } else {
+        console.log('[DEBUG] Child', a.nama, 'already has motherId:', a.motherId);
+      }
+    });
+
+    // For debugging: log children without proper motherId
+    const childrenWithoutMother = members.filter(a => !a.motherId || a.motherId === '');
+    if (childrenWithoutMother.length > 0) {
+      console.log('[DEBUG] Children without motherId (could not infer):', childrenWithoutMother.map(c => ({nama: c.nama, parentId: c.parentId})));
+    }
+
+    // Sort members for polygamous families: husband -> wife1 -> wife1's children -> wife2 -> wife2's children
+    // Build a custom sort that places children directly after their biological mother
+    members.sort((a, b) => {
+      const pIdA = a.parentId || a.idOrangTua || '';
+      const pIdB = b.parentId || b.idOrangTua || '';
+      
+      // First group by parentId
+      if (pIdA !== pIdB) return pIdA.localeCompare(pIdB);
+      
+      // For members with the same parentId, we need special logic for polygamy
+      const mIdA = a.motherId || '';
+      const mIdB = b.motherId || '';
+      
+      // If both have no motherId (husband or wives), sort by urutan
+      if (!mIdA && !mIdB) {
+        const urutanA = parseInt(a.urutan) || 999;
+        const urutanB = parseInt(b.urutan) || 999;
+        return urutanA - urutanB;
+      }
+      
+      // If A has no motherId but B does, A comes first (husband/wife before children)
+      if (!mIdA && mIdB) return -1;
+      
+      // If A has motherId but B doesn't, B comes first
+      if (mIdA && !mIdB) return 1;
+      
+      // Both have motherId - check if one is the mother of the other
+      // If A is the mother of B, A comes first
+      if (String(a.id) === mIdB) return -1;
+      // If B is the mother of A, B comes first
+      if (String(b.id) === mIdA) return 1;
+      
+      // Both are children with different mothers - sort by mother's urutan
+      if (mIdA !== mIdB) {
+        const motherA = data.find(m => String(m.id) === String(mIdA));
+        const motherB = data.find(m => String(m.id) === String(mIdB));
+        if (motherA && motherB) {
+          const urutanMotherA = parseInt(motherA.urutan) || 999;
+          const urutanMotherB = parseInt(motherB.urutan) || 999;
+          return urutanMotherA - urutanMotherB;
+        }
+        return mIdA.localeCompare(mIdB);
+      }
+      
+      // Same mother - sort by child's urutan
+      const urutanA = parseInt(a.urutan) || 999;
+      const urutanB = parseInt(b.urutan) || 999;
+      return urutanA - urutanB;
+    });
+
+    // Debug: log sorted members with motherId
+    console.log('[DEBUG] Sorted members for generation', g, ':', members.map(m => ({nama: m.nama, parentId: m.parentId, motherId: m.motherId, urutan: m.urutan})));
 
 
 
@@ -1543,7 +2078,22 @@ window.renderAnggota = async function() {
 
       // Matikan stacking jika filter "Wafat" aktif agar tidak membawa pasangan yang masih hidup ke kategori wafat
 
-      const partners = filterAktif === 'wafat' ? [] : data.filter(m => {
+      // Cek apakah ini keluarga poligami (ayah memiliki lebih dari 1 istri)
+      let pId = a.parentId || a.idOrangTua;
+      let isPolygamousFamily = false;
+      if (pId) {
+        const parent = data.find(p => String(p.id) === String(pId));
+        if (parent && isMale(parent)) {
+          const wives = data.filter(w => {
+            const spouseId = idPasanganDari(w);
+            return isFemale(w) && String(spouseId) === String(parent.id);
+          });
+          isPolygamousFamily = wives.length > 1;
+        }
+      }
+
+      // Untuk keluarga poligami, matikan stacking agar istri dan anak ditampilkan dengan urutan yang benar
+      const partners = (filterAktif === 'wafat' || isPolygamousFamily) ? [] : data.filter(m => {
 
         if (m.id === a.id) return false;
 
@@ -1575,7 +2125,9 @@ window.renderAnggota = async function() {
 
       const mainMember = stack[0];
 
-      let pId = mainMember.idOrangTua || mainMember.parentId || "root";
+      // Use pId from earlier in the loop, or get from mainMember
+      pId = pId || mainMember.idOrangTua || mainMember.parentId || "root";
+      let mId = mainMember.motherId || "";
 
 
 
@@ -1605,6 +2157,8 @@ window.renderAnggota = async function() {
 
         }
 
+        lastMotherId = null; // Reset mother tracking when parent changes
+
         let ortu = data.find(m => String(m.id) === String(pId));
 
         if (ortu) {
@@ -1627,6 +2181,23 @@ window.renderAnggota = async function() {
 
         lastParentId = pId;
 
+      }
+
+      // Sub-header for Ibu Kandung (jika ibu berubah dalam keluarga yang sama)
+      if (mId !== lastMotherId && g !== '0' && g !== 'wafat') {
+        console.log('[DEBUG] Mother change detected - lastMotherId:', lastMotherId, 'current mId:', mId, 'member:', a.nama);
+        if (familyContentHtml) {
+          genCardsHtml += `<div class="family-content">${familyContentHtml}</div>`;
+          familyContentHtml = '';
+        }
+        if (mId) {
+          const mother = data.find(m => String(m.id) === String(mId));
+          console.log('[DEBUG] Found mother:', mother ? mother.nama : 'NOT FOUND', 'for mId:', mId);
+          if (mother) {
+            genCardsHtml += `<div class="family-subheader" style="padding: 0.5rem 1rem; color: #c9a84c; font-size: 0.75rem; font-weight: 600; border-left: 2px solid #c9a84c; margin-left: 1rem;">🌸 Anak dari: ${mother.nama}</div>`;
+          }
+        }
+        lastMotherId = mId;
       }
 
 
@@ -1933,6 +2504,69 @@ window.renderBaganPengurus = async function() {
 
 // ══ LOGIKA BUKU BESAR (LEDGER) ══
 
+async function getFilteredLedgerData() {
+  const snapshot = await get(ref(db, "transaksi"));
+  let list = snapshot.exists() ? Object.entries(snapshot.val()).map(([id, data]) => ({ id, ...data })) : [];
+
+  const cari = (document.getElementById('search-ledger')?.value || '').toLowerCase();
+  if (cari) {
+    list = list.filter(t => 
+      (t.deskripsi || '').toLowerCase().includes(cari) || 
+      (t.kategori || '').toLowerCase().includes(cari)
+    );
+  }
+
+  const mBul = document.getElementById('filter-mulai-bulan')?.value;
+  const mTah = document.getElementById('filter-mulai-tahun')?.value;
+  const sBul = document.getElementById('filter-sampai-bulan')?.value;
+  const sTah = document.getElementById('filter-sampai-tahun')?.value;
+
+  if (mTah || sTah) {
+    const startVal = (mTah ? parseInt(mTah) : 1981) * 12 + (mBul ? parseInt(mBul) : 1);
+    const endVal = (sTah ? parseInt(sTah) : 2100) * 12 + (sBul ? parseInt(sBul) : 12);
+    list = list.filter(t => {
+      const dt = new Date(t.tanggal);
+      if (isNaN(dt)) return false;
+      const currentVal = dt.getFullYear() * 12 + (dt.getMonth() + 1);
+      return currentVal >= startVal && currentVal <= endVal;
+    });
+  }
+
+  list.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal)); // Urutkan dari terbaru ke terlama untuk Excel
+  return list;
+}
+
+window.exportLedgerToExcel = async function() {
+  try {
+    toast("Mempersiapkan file Excel...");
+    const data = await getFilteredLedgerData();
+    if (data.length === 0) {
+      return toast("Tidak ada data untuk diekspor.", "error");
+    }
+
+    const dataForExport = data.map(t => ({
+      Tanggal: t.tanggal,
+      Uraian: t.deskripsi,
+      Kategori: t.kategori,
+      Masuk: t.tipe === 'masuk' ? t.jumlah : 0,
+      Keluar: t.tipe === 'keluar' ? t.jumlah : 0,
+      'Diinput Oleh': t.inputOleh || 'Admin'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "BukuBesar");
+
+    worksheet['!cols'] = [{wch:12}, {wch:40}, {wch:20}, {wch:15}, {wch:15}, {wch:15}];
+
+    XLSX.writeFile(workbook, `Buku_Besar_Paguyuban_${new Date().toISOString().split('T')[0]}.xlsx`);
+    catatLog("Export Keuangan", `Mengekspor ${data.length} transaksi ke Excel.`);
+  } catch (error) {
+    console.error("Gagal mengekspor ke Excel:", error);
+    toast("Terjadi kesalahan saat membuat file Excel.", "error");
+  }
+};
+
 window.renderBukuBesar = async function() {
 
   const snapshot = await get(ref(db, "transaksi"));
@@ -2011,8 +2645,9 @@ window.renderBukuBesar = async function() {
 
     if (isMasuk) totalMasuk += t.jumlah; else totalKeluar += t.jumlah;
     const fotoHtml = t.foto ? `<button class="btn-sm" style="font-size:0.65rem; padding:4px 8px;" onclick="window.lihatBukti('${t.id}')">🖼️ Lihat</button>` : '<span style="opacity:0.3; font-size:0.7rem">-</span>';
-    // Mengunci transaksi yang berasal dari sistem arisan (Tabungan, Sosial, dan Arisan Pokok/ARISAN)
-    const isLocked = ['Tabungan', 'Sosial'].includes(t.kategori) || (t.deskripsi && (t.deskripsi.includes('[IURAN]') || t.deskripsi.includes('[ARISAN]')));
+    
+    // Kunci transaksi sistem (Tabungan & Sosial). Arisan pokok sengaja tidak dikunci agar bisa dihapus.
+    const isLocked = ['Tabungan Mandiri', 'Sosial'].includes(t.kategori) && (t.deskripsi && t.deskripsi.includes('[IURAN]'));
 
 
 
@@ -2126,6 +2761,7 @@ window.simpanTransaksi = async function() {
   const jml = cleanNumber(document.getElementById('trx-jumlah').value);
 
   const kat = document.getElementById('trx-kategori').value;
+  const fot = document.getElementById('trx-foto').value;
 
   const tip = document.querySelector('input[name="trx-tipe"]:checked').value;
 
@@ -2135,7 +2771,7 @@ window.simpanTransaksi = async function() {
 
   const trxData = {
 
-    tanggal: tgl, deskripsi: dsk, jumlah: jml, kategori: kat, tipe: tip,
+    tanggal: tgl, deskripsi: dsk, jumlah: jml, kategori: kat, tipe: tip, foto: fot,
 
     inputOleh: penggunaLogin.nama, updatedAt: Date.now()
 
@@ -2186,6 +2822,9 @@ window.bukaEditTransaksi = async function(id) {
   document.getElementById('trx-deskripsi').value = t.deskripsi;
 
   document.getElementById('trx-jumlah').value = t.jumlah ? t.jumlah.toLocaleString('id-ID') : '';
+  document.getElementById('trx-foto').value = t.foto || '';
+  const btnHapus = document.getElementById('btn-hapus-foto');
+  if(btnHapus) btnHapus.style.display = t.foto ? 'block' : 'none';
 
   document.getElementById('trx-kategori').value = t.kategori;
 
@@ -2940,7 +3579,7 @@ window.bukaFormTambah = function() {
 
 function resetFormFields() {
 
-  ['form-id','form-nama','form-panggilan','form-hp','form-lahir','form-alamat','form-tgl-wafat','form-id-orang-tua', 'form-urutan', 'form-foto'].forEach(id => {
+  ['form-id','form-nama','form-panggilan','form-hp','form-lahir','form-alamat','form-tgl-wafat','form-id-orang-tua', 'form-urutan', 'form-foto', 'form-id-ibu'].forEach(id => {
 
     const el = document.getElementById(id);
 
@@ -2966,7 +3605,7 @@ function resetFormFields() {
 
 
 
-window.updateFormOptions = async function(curParentId = "", curSpouseId = "", curPasanganLintasGenId = "") {
+window.updateFormOptions = async function(curParentId = "", curSpouseId = "", curPasanganLintasGenId = "", curMotherId = "") {
 
   const data = await window.ambilData();
 
@@ -2978,13 +3617,19 @@ window.updateFormOptions = async function(curParentId = "", curSpouseId = "", cu
 
   const currentMemberId = document.getElementById('form-id').value;
 
+  const isMale = (p) => p.gender === 'L';
+
+  const isFemale = (p) => p.gender === 'P';
+
+  const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+
 
 
   const selectOrangTua = document.getElementById('form-id-orang-tua');
 
   if(selectOrangTua) {
 
-    let html = '<option value="">- Tanpa Data (Akar) -</option>';
+    let html = `<option value="" ${String(curParentId) === "" ? 'selected' : ''}>- Tanpa Data (Akar) -</option>`;
 
     data.filter(a => {
 
@@ -3040,6 +3685,48 @@ window.updateFormOptions = async function(curParentId = "", curSpouseId = "", cu
 
   }
 
+  // Handle ibu kandung dropdown for polygamous fathers
+  const selectIbuKandung = document.getElementById('form-id-ibu');
+  const groupIbuKandung = document.getElementById('group-ibu-kandung');
+  
+  if(selectIbuKandung && groupIbuKandung) {
+    const selectedParentId = selectOrangTua ? selectOrangTua.value : '';
+    
+    if(selectedParentId) {
+      const selectedParent = data.find(p => String(p.id) === String(selectedParentId));
+      
+      if(selectedParent && isMale(selectedParent)) {
+        // Find all wives of this father
+        const wives = data.filter(w => {
+          const spouseId = idPasanganDari(w);
+          return isFemale(w) && String(spouseId) === String(selectedParent.id);
+        });
+        
+        if(wives.length > 1) {
+          // Father has multiple wives, show ibu kandung dropdown
+          groupIbuKandung.style.display = 'block';
+          let html = '<option value="">- Pilih Ibu Kandung -</option>';
+          wives.forEach(w => {
+            html += `<option value="${w.id}" ${String(w.id) === String(curMotherId) ? 'selected' : ''}>${w.nama}</option>`;
+          });
+          selectIbuKandung.innerHTML = html;
+        } else {
+          // Father has 0 or 1 wife, hide ibu kandung dropdown
+          groupIbuKandung.style.display = 'none';
+          selectIbuKandung.innerHTML = '<option value="">- Pilih Ibu -</option>';
+        }
+      } else {
+        // Selected parent is female or not found, hide ibu kandung dropdown
+        groupIbuKandung.style.display = 'none';
+        selectIbuKandung.innerHTML = '<option value="">- Pilih Ibu -</option>';
+      }
+    } else {
+      // No parent selected, hide ibu kandung dropdown
+      groupIbuKandung.style.display = 'none';
+      selectIbuKandung.innerHTML = '<option value="">- Pilih Ibu -</option>';
+    }
+  }
+
 };
 
 
@@ -3051,6 +3738,9 @@ window.bukaEdit = async function(id) {
   const a = data.find(x => String(x.id) === String(id));
 
   if(!a) return;
+
+  const isMale = (p) => p.gender === 'L';
+  const isFemale = (p) => p.gender === 'P';
 
 
 
@@ -3112,12 +3802,52 @@ window.bukaEdit = async function(id) {
 
   if(genderRadio) genderRadio.checked = true;
 
-
-
   window.toggleTglWafat();
+  
+  // START: New logic to find father and mother
+  let fatherId = null;
+  let motherId = a.motherId || null; // Use stored motherId if available
+  const parentId = a.parentId || a.idOrangTua;
 
-  await window.updateFormOptions(a.parentId || a.idOrangTua, a.spouseId || a.idPasangan, a.idPasanganLintasGen);
-
+  if (parentId) {
+      const parent = data.find(p => String(p.id) === String(parentId));
+      if (parent) {
+          if (isMale(parent)) {
+              fatherId = parent.id;
+              // If motherId not already stored, try to find it from wives
+              if (!motherId) {
+                  const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+                  const wives = data.filter(w => {
+                      const spouseId = idPasanganDari(w);
+                      return isFemale(w) && String(spouseId) === String(parent.id);
+                  });
+                  if (wives.length === 1) {
+                      motherId = wives[0].id;
+                  }
+              }
+          } else { // parent is mother
+              if (!motherId) motherId = parent.id;
+              const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+              const sId = idPasanganDari(parent);
+              let father = sId ? data.find(f => String(f.id) === String(sId)) : null;
+              if (!father) {
+                  father = data.find(f => String(idPasanganDari(f)) === String(parent.id) && isMale(f));
+              }
+              if (father) fatherId = father.id;
+          }
+      }
+  }
+  // END: New logic
+  await window.updateFormOptions(fatherId, a.spouseId || a.idPasangan, a.idPasanganLintasGen, motherId);
+  
+  // Set ibu kandung field value after updateFormOptions populates it
+  if (motherId) {
+    const selectIbuKandung = document.getElementById('form-id-ibu');
+    if (selectIbuKandung) {
+      selectIbuKandung.value = motherId;
+    }
+  }
+  
   window.bukaModal('modal-anggota');
 
 };
@@ -3256,11 +3986,9 @@ window.simpanAnggota = async function() {
     nama,
 
     panggilan: formatTeks(document.getElementById('form-panggilan').value.trim()),
-
     generasi: document.getElementById('form-generasi').value,
-
     parentId: document.getElementById('form-id-orang-tua').value,
-
+    motherId: document.getElementById('form-id-ibu').value,
     spouseId: document.getElementById('form-id-pasangan').value,
 
     nikahLintasGen: document.getElementById('form-nikah-lintas-gen').checked,
@@ -3610,30 +4338,15 @@ function populateLedgerFilters() {
 
 document.addEventListener('DOMContentLoaded', () => {
     populateLedgerFilters();
+    
+    // Add event listener for father selection change to update ibu kandung dropdown
+    const selectOrangTua = document.getElementById('form-id-orang-tua');
+    if(selectOrangTua) {
+        selectOrangTua.addEventListener('change', () => {
+            const currentParentId = selectOrangTua.value;
+            const currentSpouseId = document.getElementById('form-id-pasangan')?.value || '';
+            const currentPasanganLintasGenId = document.getElementById('form-id-pasangan-lintas-gen')?.value || '';
+            window.updateFormOptions(currentParentId, currentSpouseId, currentPasanganLintasGenId);
+        });
+    }
 });
-
-window.hapusTransaksi = async function(id) {
-  if (!confirm('Hapus transaksi ini?')) return;
-  await remove(ref(db, `transaksi/${id}`));
-  toast('Transaksi dihapus.');
-  catatLog("Hapus Keuangan", "ID Transaksi: " + id);
-  window.renderBukuBesar();
-};
-
-window.bukaEditTransaksi = async function(id) {
-  const snapshot = await get(ref(db, `transaksi/${id}`));
-  if (!snapshot.exists()) return;
-  const t = snapshot.val();
-  document.getElementById('trx-id').value = id;
-  document.getElementById('trx-tanggal').value = t.tanggal;
-  document.getElementById('trx-deskripsi').value = t.deskripsi;
-  document.getElementById('trx-jumlah').value = t.jumlah ? t.jumlah.toLocaleString('id-ID') : '';
-  document.getElementById('trx-foto').value = t.foto || '';
-  const btnHapus = document.getElementById('btn-hapus-foto');
-  if(btnHapus) btnHapus.style.display = t.foto ? 'block' : 'none';
-  document.getElementById('trx-kategori').value = t.kategori;
-  const radio = document.querySelector(`input[name="trx-tipe"][value="${t.tipe}"]`);
-  if(radio) radio.checked = true;
-  document.getElementById('modal-trx-judul').textContent = 'Edit Transaksi';
-  window.bukaModal('modal-transaksi');
-};

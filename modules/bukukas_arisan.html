@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buku Kas Arisan - PKEK</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text-dark); }
+        .konten-utama { margin-left: 0; min-height: 100vh; background: var(--bg); }
+        .main-content { padding: 1.5rem; }
+        .panel { display: block; background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 1.5rem; box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; }
+        .panel h3 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--text-dark); margin-bottom: 1.2rem; }
+        .panel h3 em { color: var(--primary); font-style: normal; }
+        .table-wrapper { border-radius: 14px; overflow-x: auto; border: 1px solid var(--border); background: #fff; }
+        table { border: none; font-size: 0.85rem; width: 100%; }
+        th { background: #f8fafc; font-family: 'Outfit', sans-serif; font-size: .68rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; border-bottom: 2px solid var(--border); padding: 1rem .8rem; white-space: nowrap; }
+        td { border-bottom: 1px solid var(--border); padding: .9rem .8rem; white-space: nowrap; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .txt-masuk { color: var(--accent-green); font-weight: 600; }
+        .txt-keluar { color: var(--accent-red); font-weight: 600; }
+        .filter-bar { display: flex; gap: .5rem; margin-bottom: 1.2rem; flex-wrap: wrap; align-items: center; }
+        .form-control-small {
+            padding: .5rem .8rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-dark);
+            font-family: 'Outfit', sans-serif;
+            font-size: .85rem;
+            outline: none;
+            transition: all .2s;
+            border-radius: 10px;
+        }
+        @media (max-width: 768px) {
+            .main-content { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <main class="konten-utama">
+        <div class="topbar">
+            <div class="topbar-inner">
+              <div style="display:flex; align-items:center;">
+                  <button class="btn-back" onclick="history.back()">❮</button>
+              </div>
+              <p class="topbar-judul" id="topbar-judul">Buku Kas Arisan</p>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <p class="topbar-user" id="topbar-user" style="text-align:right; margin:0; line-height:1.2; font-size:0.75rem;"></p>
+                <button onclick="window.keluar()" title="Keluar" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:0.2s;">🚪</button>
+              </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h3>Buku Kas <em>Dana Sosial & Tabungan</em></h3>
+                <p style="font-size:0.85rem; color:var(--text-mid); margin-top:-1rem; margin-bottom:1.5rem;">Laporan ini merangkum semua pemasukan dana sosial & tabungan dari iuran, serta pengeluaran sosial yang tercatat di modul arisan.</p>
+                
+                <div class="filter-bar" style="flex-wrap:wrap;">
+                    <input type="text" class="search-box" id="search-ledger" placeholder="🔍 Cari uraian..." oninput="window.renderBukuKasArisan()"/>
+                    <div style="display:flex; gap:5px; align-items:center; flex-wrap: wrap;">
+                      <select id="filter-mulai-bulan" class="form-control-small" onchange="window.renderBukuKasArisan()"></select>
+                      <select id="filter-mulai-tahun" class="form-control-small" onchange="window.renderBukuKasArisan()"></select>
+                      <span style="color:var(--text-mid);">-</span>
+                      <select id="filter-sampai-bulan" class="form-control-small" onchange="window.renderBukuKasArisan()"></select>
+                      <select id="filter-sampai-tahun" class="form-control-small" onchange="window.renderBukuKasArisan()"></select>
+                      <button class="btn-sm" onclick="window.resetFilterBukuKas()" style="padding:0.5rem 0.8rem;">Reset</button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper" style="margin-top:1.5rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Uraian</th>
+                                <th>Kategori</th>
+                                <th class="text-right">Masuk</th>
+                                <th class="text-right">Keluar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledger-body">
+                            <!-- Data akan di-render oleh JavaScript -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" style="font-weight:bold;">TOTAL</td>
+                                <td id="ledger-total-masuk" class="text-right txt-masuk" style="font-weight:bold;"></td>
+                                <td id="ledger-total-keluar" class="text-right txt-keluar" style="font-weight:bold;"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="font-weight:bold;">SALDO AKHIR</td>
+                                <td id="ledger-saldo-akhir" colspan="2" class="text-right" style="font-weight:bold; font-size:1.1rem;"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="../js/bukukas_arisan.js"></script>
+</body>
+</html>

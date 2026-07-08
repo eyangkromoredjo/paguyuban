@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -1985,7 +1985,6 @@ window.simpanEditPembayaran = async function() {
     if (isPaid) {
         const deskripsi = `[IURAN] Periode ${periode} - ${member.nama}`;
         const paymentDate = new Date(paymentEntry.time).toISOString().split('T')[0];
-        if (override.arisan > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Arisan)`, jumlah: override.arisan, kategori: 'Kas', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_arisan` });
         if (override.sosial > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Sosial)`, jumlah: override.sosial, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_sosial` });
         if (override.tabungan > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Tabungan)`, jumlah: override.tabungan, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_tabungan` });
     }
