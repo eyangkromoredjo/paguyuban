@@ -746,6 +746,18 @@ function kartu(anggota, infoPohon = '', data = []) {
                         penggunaLogin?.level === 'pengurus' ||
                         (penggunaLogin?.level === 'anggota' && !isTargetPengurus);
 
+    // Menyiapkan data tambahan
+    const lahirRaw = anggota.lahir || anggota.tanggalLahir || '';
+    const lahir = lahirRaw ? new Date(lahirRaw).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const wafatRaw = anggota.tglWafat || '';
+    const wafat = wafatRaw ? new Date(wafatRaw).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+    const statusKey = anggota.kehidupan === 'wafat' ? 'wafat-b' : (anggota.status === 'aktif' ? 'aktif' : 'tidak-aktif');
+    const statusLabel = statusKey === 'wafat-b' ? 'Wafat' : statusKey === 'aktif' ? 'Aktif' : 'Tidak Aktif';
+
+    const level = anggota.level || 'anggota';
+    const levelBadge = anggota.bolehDaftar ? `<span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.55rem; padding: 2px 6px; border:1px solid var(--primary); border-radius:4px; font-weight:bold;">${level.toUpperCase()}</span>` : '';
+
     return `
       <div class="a-card ${genderClass}">
         <div class="a-avatar">${inisial}</div>
@@ -753,11 +765,18 @@ function kartu(anggota, infoPohon = '', data = []) {
             <p class="a-nama">${wafatIcon}${anggota.nama || '-'}</p>
             ${nasabHtml}
             <p class="a-panggilan">${anggota.panggilan ? `"${anggota.panggilan}"` : ''}</p>
+            <div class="a-badges" style="margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px;">
+              <span class="badge ${statusKey}">${statusLabel}</span>
+              ${levelBadge}
+            </div>
             ${infoPohon ? `<p class="a-info-pohon">${infoPohon}</p>` : ''}
-            ${(anggota.hp || anggota.alamat) ? `
+            ${(anggota.hp || anggota.alamat || lahir || wafat || (penggunaLogin?.level === 'admin' && anggota.password)) ? `
             <div class="a-kontak-info">
+                ${lahir ? `<span>🎂 ${lahir}</span>` : ''}
+                ${wafat ? `<span>🪦 ${wafat}</span>` : ''}
                 ${anggota.hp ? `<span>📱 ${anggota.hp}</span>` : ''}
                 ${anggota.alamat ? `<span>📍 ${anggota.alamat}</span>` : ''}
+                ${(penggunaLogin?.level === 'admin' && anggota.password) ? `<span style="color: var(--accent-orange); font-weight: 600;">🔑 ${anggota.password}</span>` : ''}
             </div>
             ` : ''}
         </div>
@@ -780,8 +799,8 @@ function kartu(anggota, infoPohon = '', data = []) {
             </select>
           </div>
         ` : ''}
-      </div>`;
-}
+      </div>
+`;}
 
 /*
 function kartu_lama(anggota) {
@@ -2202,19 +2221,18 @@ window.renderAnggota = async function() {
 
 
 
-      if (partners.length > 0) {
+            if (partners.length > 0) {
 
         const mainMemberId = stack[0].id;
-
-        familyContentHtml += `<div class="a-card-stack" data-anggota-id="${mainMemberId}" onclick="if(!event.target.closest('.a-aksi') && !event.target.closest('.a-akses-control') && !event.target.closest('input') && !event.target.closest('select')) this.classList.toggle('terbuka')">${stack.map(member => kartu(member, data)).join('')}</div>`;
+        familyContentHtml += `<div class="a-card-stack" data-anggota-id="${mainMemberId}" onclick="if(!event.target.closest('.a-aksi') && !event.target.closest('.a-akses-control') && !event.target.closest('input') && !event.target.closest('select')) this.classList.toggle('terbuka')">${stack.map(member => kartu(member, '', data)).join('')}</div>`;
 
         stack.forEach(m => renderedIds.add(m.id));
 
       } else {
-
-        familyContentHtml += kartu(a, data);
+        familyContentHtml += kartu(a, '', data);
 
         renderedIds.add(a.id);
+
 
       }
 
@@ -4101,7 +4119,7 @@ window.gantiPasswordDariLogin = async function() {
   if (savedUser) {
     // User sudah login — pakai id dari session
     userId = JSON.parse(savedUser).id;
- } else {
+  } else {
     // Belum login — cari berdasarkan username yang diisi di modal
     const uInput = document.getElementById('input-username-ganti')?.value?.trim().toLowerCase();
     if (!uInput) return alert("Silakan isi nama pengguna terlebih dahulu.");
@@ -4337,16 +4355,52 @@ function populateLedgerFilters() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    populateLedgerFilters();
-    
-    // Add event listener for father selection change to update ibu kandung dropdown
-    const selectOrangTua = document.getElementById('form-id-orang-tua');
-    if(selectOrangTua) {
-        selectOrangTua.addEventListener('change', () => {
-            const currentParentId = selectOrangTua.value;
-            const currentSpouseId = document.getElementById('form-id-pasangan')?.value || '';
-            const currentPasanganLintasGenId = document.getElementById('form-id-pasangan-lintas-gen')?.value || '';
-            window.updateFormOptions(currentParentId, currentSpouseId, currentPasanganLintasGenId);
+    // Attach login button event listener
+    const loginButton = document.getElementById('btn-login');
+    if (loginButton) {
+        loginButton.addEventListener('click', window.handleLogin);
+    }
+
+    // Attach Enter key listener to password field for login
+    const passwordInput = document.getElementById('input-pass');
+    if (passwordInput) {
+        passwordInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                window.handleLogin();
+            }
         });
+    }
+
+    // Re-check session on load
+    const saved = sessionStorage.getItem('kromoredjo_user');
+    if (saved) {
+        const akun = JSON.parse(saved);
+        proceedLogin(akun);
+        
+        const hash = window.location.hash.substring(1) || 'dashboard';
+        if (hash.startsWith('anggota-')) {
+            const sub = hash.replace('anggota-', '');
+            history.replaceState({ panel: 'anggota', sub: sub }, "", "#" + hash);
+            window.bukaPanel('anggota', null, false);
+            window.switchSubPanelAnggota(sub, false);
+        } else {
+            history.replaceState({ panel: hash }, "", "#" + hash);
+            if (hash) {
+                const panelMap = { 'anggota': 'anggota', 'logs': 'logs', 'dashboard': 'dashboard', 'buku-besar': 'buku-besar' };
+                if (panelMap[hash]) {
+                    const navItems = document.querySelectorAll('.nav-item');
+                    let targetNav = null;
+                    navItems.forEach(item => {
+                        if (item.getAttribute('onclick')?.includes(`'${panelMap[hash]}'`)) targetNav = item;
+                    });
+                    window.bukaPanel(panelMap[hash], targetNav, false);
+                }
+            }
+        }
+    }
+
+    // Initialize filters and other dynamic elements
+    if (document.getElementById('filter-mulai-bulan')) {
+        populateLedgerFilters();
     }
 });

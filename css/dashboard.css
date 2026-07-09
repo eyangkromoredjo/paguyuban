@@ -1251,11 +1251,15 @@ input:-webkit-autofill:focus {
   border-bottom: 1px solid var(--border);
   color: var(--text-dark);
 }
-.table-wrapper tfoot td {
-  background: #fff;
-  font-weight: 700; /* Ditebalkan */
-  font-size: .83rem; /* Ukuran font disamakan dengan isi tabel */
-  padding: .7rem 1rem;
+    .table-wrapper tfoot td {
+      position: sticky;
+      bottom: 0;
+      background: #f8fafc;
+      font-weight: 700; /* Ditebalkan */
+      font-size: .83rem; /* Ukuran font disamakan dengan isi tabel */
+      padding: .7rem 1rem;
+      border-top: 2px solid var(--border);
+      z-index: 10;
 }
 
 .ledger-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .7rem; margin-bottom: 1.2rem; }

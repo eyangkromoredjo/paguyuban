@@ -426,12 +426,9 @@
             <div class="panel" id="panel-pengeluaran">
                 <h3>Catat <em>Pengeluaran Sosial</em></h3>
                 <div class="form-group">
-                    <label>Pilih Periode</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="hidden" id="exp-id">
-                        <select id="exp-month" class="form-control-small" onchange="renderExpenseTable()"></select>
-                        <select id="exp-year" class="form-control-small" onchange="renderExpenseTable()"></select>
-                    </div>
+                    <label>Tanggal Pengeluaran</label>
+                    <input type="hidden" id="exp-id">
+                    <input type="date" id="exp-date" class="form-control" onchange="renderExpenseTable()">
                 </div>
                 <div class="form-group">
                     <label>Jenis Pengeluaran</label>
@@ -1446,14 +1443,14 @@ window.hapusPengeluaranArisan = async function(id) {
 
 async function saveExpense() {
     const id = document.getElementById('exp-id').value;
-    const periode = getPeriodeFromSelectors('exp');
+    const tanggal = document.getElementById('exp-date').value;
     const tipe = document.getElementById('exp-type').value;
     const desc = document.getElementById('exp-desc').value.trim();
     const amount = parseInt(document.getElementById('exp-amount').value, 10) || 0;
     const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
 
-    if (!periode || !desc || amount <= 0) {
-        showToast('Lengkapi periode, jenis, uraian, dan nominal pengeluaran.', 'error', 1800);
+    if (!tanggal || !desc || amount <= 0) {
+        showToast('Lengkapi tanggal, jenis, uraian, dan nominal pengeluaran.', 'error', 1800);
         return;
     }
 
@@ -1461,7 +1458,7 @@ async function saveExpense() {
     const ledgerCategory = (tipe === 'Sosial') ? 'Sosial' : 'Operasional';
 
     const trxData = {
-        tanggal: `${periode}-01`, 
+        tanggal: tanggal,
         deskripsi: `[ARISAN] ${desc}`,
         jumlah: amount,
         kategori: ledgerCategory,
@@ -1496,12 +1493,8 @@ window.editExpense = function(id) {
     document.getElementById('exp-amount').value = item.jumlah;
     document.getElementById('exp-type').value = item.kategori === 'Sosial' ? 'Sosial' : (item.deskripsi.includes('Inventaris') ? 'Inventaris' : 'Lainnya');
     
-    // Parse tanggal YYYY-MM-DD
-    const parts = item.tanggal.split('-');
-    if (parts.length >= 2) {
-        document.getElementById('exp-year').value = parts[0];
-        document.getElementById('exp-month').value = parts[1];
-    }
+    // Set tanggal
+    document.getElementById('exp-date').value = item.tanggal;
     
     const btn = document.querySelector('#panel-pengeluaran .btn-primary');
     if (btn) btn.textContent = 'Update Pengeluaran';
@@ -1513,7 +1506,11 @@ function renderExpenseTable() {
     const tbody = document.getElementById('exp-tbody');
     if (!tbody) return;
 
-    const selectedPeriode = getPeriodeFromSelectors('exp');
+    const selectedDate = document.getElementById('exp-date')?.value || '';
+    console.log('=== DEBUG EXPENSE TABLE ===');
+    console.log('Selected Date:', selectedDate);
+    console.log('Total ledgerTransactions:', window.ledgerTransactions?.length || 0);
+    
     const user = window.penggunaLogin;
     const canDelete = user && (user.level === 'admin' || user.level === 'pengurus');
 
@@ -1522,9 +1519,13 @@ function renderExpenseTable() {
         const isKeluar = item.tipe === 'keluar';
         // Filter: Hanya yang kategori Sosial atau memiliki label [ARISAN] di deskripsi
         const isArisanExp = item.kategori === 'Sosial' || (item.deskripsi || '').includes('[ARISAN]');
-        const matchPer = !selectedPeriode || item.tanggal.startsWith(selectedPeriode);
-        return isKeluar && isArisanExp && matchPer;
+        
+        console.log(`Item: ${item.tanggal} | isKeluar: ${isKeluar} | isArisanExp: ${isArisanExp}`);
+        
+        return isKeluar && isArisanExp;
     });
+
+    console.log('Filtered expenses count:', filteredExpenses.length);
 
     if (!filteredExpenses.length) {
         tbody.innerHTML = `<tr><td colspan="${canDelete ? 5 : 4}" style="text-align:center; color:var(--text-light); padding:18px;">Belum ada data pengeluaran sosial di Buku Besar.</td></tr>`;
@@ -1711,7 +1712,7 @@ function populatePeriodeSelectors() {
     const years = [];
     for (let y = 2021; y <= currentYear + 10; y++) years.push(y);
 
-    ['pay','jadwal','exp'].forEach(prefix => {
+    ['pay','jadwal'].forEach(prefix => {
         const mEl = document.getElementById(`${prefix}-month`);
         const yEl = document.getElementById(`${prefix}-year`);
         if (!mEl || !yEl) return;
@@ -1722,14 +1723,15 @@ function populatePeriodeSelectors() {
         yEl.innerHTML = '<option value="">-tahun-</option>';
         years.forEach(y => { const opt = document.createElement('option'); opt.value = String(y); opt.textContent = String(y); yEl.appendChild(opt); });
 
-        if (prefix === 'exp') {
-            mEl.value = ''; // Default ke "-bulan-"
-            yEl.value = ''; // Default ke "-tahun-"
-        } else {
-            mEl.value = String(now.getMonth() + 1).padStart(2, '0');
-            yEl.value = String(currentYear);
-        }
+        mEl.value = String(now.getMonth() + 1).padStart(2, '0');
+        yEl.value = String(currentYear);
     });
+
+    // Set default tanggal pengeluaran ke hari ini
+    const expDateEl = document.getElementById('exp-date');
+    if (expDateEl) {
+        expDateEl.value = now.toISOString().split('T')[0];
+    }
 
     // initial render
     renderPayChecklist();
@@ -1972,21 +1974,77 @@ window.simpanEditPembayaran = async function() {
 
     await set(ref(db, "arisan_global"), window.storageArisan);
     
-    // Sync to ledger
+    // Sync to ledger with SUMMARY logic
     const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
     const periodeId = periode.replace(/-/g, '_');
-    const originIdPrefix = `iuran_${periodeId}_${memberId}`;
+    const tglPeriode = `${periode}-01`;
+
+    // 1. Recalculate totals for the entire period
+    let totalArisanPeriode = 0;
+    let totalSosialPeriode = 0;
+    let totalTabunganPeriode = 0;
+    let jumlahOrangArisan = 0;
+    let jumlahOrangSosial = 0;
+    let jumlahOrangTabungan = 0;
+
+    const iuranBulanIniUpdated = window.storageArisan.iuran_bulanan.find(e => e.periode === periode);
+    if (iuranBulanIniUpdated && iuranBulanIniUpdated.pembayaran) {
+        const pembayaran = Array.isArray(iuranBulanIniUpdated.pembayaran) ? iuranBulanIniUpdated.pembayaran : Object.values(iuranBulanIniUpdated.pembayaran);
+        for (const p of pembayaran) {
+            if (p.paid) {
+                const member = window.semuaAnggota.find(a => String(a.id) === String(p.memberId));
+                if (member) {
+                    const kom = member.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
+                    const defaultNom = member.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
+
+                    // If overrideNominal exists, it is the source of truth. Use its values, defaulting to 0 if a component is missing.
+                    // If overrideNominal does NOT exist (e.g., old data), fall back to the member's default iuran components and nominals.
+                    const arisanAmount = p.overrideNominal ? (p.overrideNominal.arisan || 0) : (kom.arisan ? (defaultNom.arisan || 55000) : 0);
+                    if (arisanAmount > 0) {
+                        totalArisanPeriode += arisanAmount;
+                        jumlahOrangArisan++;
+                    }
+
+                    const sosialAmount = p.overrideNominal ? (p.overrideNominal.sosial || 0) : (kom.sosial ? (defaultNom.sosial || 40000) : 0);
+                    if (sosialAmount > 0) {
+                        totalSosialPeriode += sosialAmount;
+                        jumlahOrangSosial++;
+                    }
+
+                    const tabunganAmount = p.overrideNominal ? (p.overrideNominal.tabungan || 0) : (kom.tabungan ? (defaultNom.tabungan || 5000) : 0);
+                    if (tabunganAmount > 0) {
+                        totalTabunganPeriode += tabunganAmount;
+                        jumlahOrangTabungan++;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Find and delete old summary transactions for this period
+    const originIdArisan = `iuran_summary_${periodeId}_arisan`;
+    const originIdSosial = `iuran_summary_${periodeId}_sosial`;
+    const originIdTabungan = `iuran_summary_${periodeId}_tabungan`;
 
     const trxSnap = await get(ref(db, "transaksi"));
     if (trxSnap.exists()) {
         const allTrx = Object.entries(trxSnap.val());
-        for (const [trxId, trx] of allTrx) { if (trx.originId && trx.originId.startsWith(originIdPrefix)) { await remove(ref(db, `transaksi/${trxId}`)); } }
+        for (const [trxId, trx] of allTrx) {
+            if (trx.originId === originIdArisan || trx.originId === originIdSosial || trx.originId === originIdTabungan) {
+                await remove(ref(db, `transaksi/${trxId}`));
+            }
+        }
     }
-    if (isPaid) {
-        const deskripsi = `[IURAN] Periode ${periode} - ${member.nama}`;
-        const paymentDate = new Date(paymentEntry.time).toISOString().split('T')[0];
-        if (override.sosial > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Sosial)`, jumlah: override.sosial, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_sosial` });
-        if (override.tabungan > 0) await set(push(ref(db, "transaksi")), { tanggal: paymentDate, deskripsi: `${deskripsi} (Tabungan)`, jumlah: override.tabungan, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: `${originIdPrefix}_tabungan` });
+
+    // 3. Create new summary transactions
+    // Iuran Arisan tidak dimasukkan ke buku besar sesuai permintaan.
+    if (totalSosialPeriode > 0) {
+        const deskripsi = `Total pemasukan Dana Sosial (${periode}), ${jumlahOrangSosial} orang`;
+        await set(push(ref(db, "transaksi")), { tanggal: tglPeriode, deskripsi, jumlah: totalSosialPeriode, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: originIdSosial });
+    }
+    if (totalTabunganPeriode > 0) {
+        const deskripsi = `Total pemasukan Tabungan Mandiri (${periode}), ${jumlahOrangTabungan} orang`;
+        await set(push(ref(db, "transaksi")), { tanggal: tglPeriode, deskripsi, jumlah: totalTabunganPeriode, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: originIdTabungan });
     }
 
     window.tutupModal('modal-edit-pembayaran');

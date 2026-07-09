@@ -70,35 +70,53 @@ window.renderBukuKasArisan = function() {
             ? bulan.pembayaran 
             : Object.values(bulan.pembayaran || {});
 
+        let totalSosialPeriode = 0;
+        let totalTabunganPeriode = 0;
+        let jumlahOrangSosial = 0;
+        let jumlahOrangTabungan = 0;
+        const tglPeriode = bulan.periode ? `${bulan.periode}-01` : new Date().toISOString().split('T')[0];
+
         pembayaran.forEach(p => {
             if (p.paid) {
                 const member = dataMaster.anggota.find(a => String(a.id) === String(p.memberId));
                 if (member) {
-                    const nom = member.nominalIuran || { sosial: 10000, tabungan: 5000 };
                     const kom = member.iuranKomponen || { sosial: false, tabungan: false };
-                    const tgl = p.time ? new Date(p.time).toISOString().split('T')[0] : `${bulan.periode}-01`;
+                    const defaultNom = member.nominalIuran || { sosial: 10000, tabungan: 5000 };
 
-                    if (kom.sosial) {
-                        transactions.push({
-                            tanggal: tgl,
-                            deskripsi: `Iuran Sosial ${bulan.periode} - ${member.nama}`,
-                            kategori: 'Dana Sosial',
-                            tipe: 'masuk',
-                            jumlah: parseInt(nom.sosial) || 10000
-                        });
+                    // Correct logic: Prioritize overrideNominal if it exists, otherwise use member's default.
+                    const sosialAmount = p.overrideNominal ? (p.overrideNominal.sosial || 0) : (kom.sosial ? (defaultNom.sosial || 10000) : 0);
+                    if (sosialAmount > 0) {
+                        totalSosialPeriode += sosialAmount;
+                        jumlahOrangSosial++;
                     }
-                    if (kom.tabungan) {
-                        transactions.push({
-                            tanggal: tgl,
-                            deskripsi: `Tabungan Mandiri ${bulan.periode} - ${member.nama}`,
-                            kategori: 'Tabungan Mandiri',
-                            tipe: 'masuk',
-                            jumlah: parseInt(nom.tabungan) || 5000
-                        });
+
+                    const tabunganAmount = p.overrideNominal ? (p.overrideNominal.tabungan || 0) : (kom.tabungan ? (defaultNom.tabungan || 5000) : 0);
+                    if (tabunganAmount > 0) {
+                        totalTabunganPeriode += tabunganAmount;
+                        jumlahOrangTabungan++;
                     }
                 }
             }
         });
+
+        if (totalSosialPeriode > 0) {
+            transactions.push({
+                tanggal: tglPeriode,
+                deskripsi: `Total pemasukan Dana Sosial (${bulan.periode}), ${jumlahOrangSosial} orang`,
+                kategori: 'Dana Sosial',
+                tipe: 'masuk',
+                jumlah: totalSosialPeriode
+            });
+        }
+        if (totalTabunganPeriode > 0) {
+            transactions.push({
+                tanggal: tglPeriode,
+                deskripsi: `Total pemasukan Tabungan Mandiri (${bulan.periode}), ${jumlahOrangTabungan} orang`,
+                kategori: 'Tabungan Mandiri',
+                tipe: 'masuk',
+                jumlah: totalTabunganPeriode
+            });
+        }
     });
 
     // 2. Proses Pengeluaran dari Buku Besar (hanya kategori 'Sosial')

@@ -3,60 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Tabungan Mandiri - Paguyuban</title>
+    <title>Laporan Tabungan Mandiri - PKEK</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="../css/dashboard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #e0e7ff;
-            --accent: #8b5cf6;
-            --accent-orange: #f97316;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --text-dark: #1e293b;
-            --text-light: #64748b;
-            --text-muted: #94a3b8;
-            --border: #e2e8f0;
-            --bg-light: #f8fafc;
-            --bg-white: #ffffff;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
+        /* Custom Overrides for Tabungan Module to match DANA Dashboard */
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text-dark); }
+        .tabungan-layout { display: flex; flex-direction: row; min-height: 100vh; }
+        .konten-utama { margin-left: 0; flex: 1; min-height: 100vh; background: var(--bg); }
+        .tabungan-main { padding: 1.5rem; }
+        
+        /* Re-style Panels as Section Cards */
+        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 1.5rem; box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; animation: fadeInUp 0.4s ease; overflow: visible; }
+        .panel::before { display: none; }
+        .panel h3 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--text-dark); margin-bottom: 1.2rem; }
+        .panel h3 em { color: var(--primary); font-style: normal; }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg-light);
-            color: var(--text-dark);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .header {
+        /* Header Section */
+        .header-section {
             margin-bottom: 2rem;
         }
-
-        .header h1 {
+        .header-section h1 {
+            font-family: 'Outfit', sans-serif;
             font-size: 1.8rem;
             font-weight: 700;
             color: var(--text-dark);
             margin-bottom: 0.5rem;
         }
-
-        .header p {
+        .header-section p {
             color: var(--text-light);
             font-size: 0.95rem;
         }
@@ -69,10 +45,10 @@
         }
 
         .stat-card {
-            background: var(--bg-white);
-            border-radius: 12px;
+            background: var(--bg-card);
+            border-radius: 18px;
             padding: 1.5rem;
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow-sm);
             border: 1px solid var(--border);
         }
 
@@ -90,28 +66,31 @@
         }
 
         .stat-card.total {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
+            background: linear-gradient(135deg, #4d4fe4, #2933c2);
             color: white;
+            border: none;
         }
 
         .stat-card.total .stat-label {
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.95);
         }
 
         .stat-card.total .stat-value {
             color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .filters {
-            background: var(--bg-white);
+            background: var(--bg-card);
             padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
+            border-radius: 18px;
+            box-shadow: var(--shadow-sm);
             margin-bottom: 2rem;
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
             align-items: end;
+            border: 1px solid var(--border);
         }
 
         .filter-group {
@@ -130,17 +109,19 @@
         .filter-group select,
         .filter-group input {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.85rem 1rem;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 12px;
             font-family: 'Outfit', sans-serif;
             font-size: 0.9rem;
+            background: #fff;
+            color: var(--text-dark);
         }
 
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-family: 'Outfit', sans-serif;
             font-weight: 600;
             cursor: pointer;
@@ -167,11 +148,12 @@
         }
 
         .table-container {
-            background: var(--bg-white);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
+            background: var(--bg-card);
+            border-radius: 18px;
+            box-shadow: var(--shadow-sm);
             overflow: hidden;
             margin-bottom: 2rem;
+            border: 1px solid var(--border);
         }
 
         .table-header {
@@ -186,19 +168,22 @@
             font-size: 1.2rem;
             font-weight: 600;
             color: var(--text-dark);
+            font-family: 'Outfit', sans-serif;
         }
 
         .table-wrapper {
             overflow-x: auto;
+            border-radius: 4px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            color: var(--text-dark);
         }
 
         th {
-            background: var(--bg-light);
+            background: #f8fafc;
             padding: 1rem;
             text-align: left;
             font-weight: 600;
@@ -206,6 +191,7 @@
             color: var(--text-light);
             border-bottom: 2px solid var(--border);
             white-space: nowrap;
+            font-family: 'Outfit', sans-serif;
         }
 
         td {
@@ -216,7 +202,7 @@
         }
 
         tr:hover {
-            background: var(--bg-light);
+            background: #f8fafc;
         }
 
         .text-right {
@@ -285,19 +271,37 @@
         }
     </style>
 </head>
+<script src="../js/database.js"></script>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Laporan Tabungan Mandiri</h1>
-            <p>Rekapitulasi tabungan mandiri seluruh anggota per periode</p>
+<div class="tabungan-layout">
+
+    <!-- MAIN CONTENT (Matches Dashboard) -->
+    <main class="konten-utama">
+        <div class="topbar">
+          <div class="topbar-inner">
+            <div style="display:flex; align-items:center;">
+              <button class="btn-back" onclick="history.back()">❮</button>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+              <p class="topbar-judul" id="topbar-judul" style="margin:0;">Laporan Tabungan Mandiri</p>
+              <p id="topbar-subtitle" style="font-size:0.6rem; color:rgba(255,255,255,0.7); margin:0; font-family:'Inter'; text-transform:uppercase; letter-spacing:1px; font-weight:600;">Rekapitulasi Tabungan</p>
+            </div>
+            <p class="topbar-user" id="topbar-user"></p>
+          </div>
         </div>
 
-        <div id="access-denied" class="access-denied" style="display: none;">
-            <h2>Akses Ditolak</h2>
-            <p>Halaman ini hanya dapat diakses oleh Admin dan Pengurus.</p>
-        </div>
+        <div class="tabungan-main">
+            <div class="header-section">
+                <h1>Laporan Tabungan Mandiri</h1>
+                <p>Rekapitulasi tabungan mandiri seluruh anggota per periode</p>
+            </div>
 
-        <div id="content">
+            <div id="access-denied" class="access-denied" style="display: none;">
+                <h2>Akses Ditolak</h2>
+                <p>Halaman ini hanya dapat diakses oleh Admin dan Pengurus.</p>
+            </div>
+
+            <div id="content">
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Total Anggota Menabung</div>
@@ -376,7 +380,9 @@
                 </div>
             </div>
         </div>
-    </div>
+        </div> <!-- end tabungan-main -->
+    </main> <!-- end konten-utama -->
+</div> <!-- end tabungan-layout -->
 
     <script type="module">
         import { db } from '../js/firebase-config.js';
@@ -418,6 +424,18 @@
             document.getElementById('content').style.display = 'none';
         }
 
+        // Update topbar user info (matches arisan.html)
+        window.updateTopbarUser = async function() {
+            const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
+            if (user) {
+                const levelMap = { admin: '👑 Admin', pengurus: '🛡️ Pengurus', anggota: '🔑 Anggota', guest: '👤 Tamu' };
+                const levelText = levelMap[user.level] || '👤 Tamu';
+                document.getElementById('topbar-user').textContent = `${user.nama} · ${levelText}`;
+            } else {
+                document.getElementById('topbar-user').textContent = '';
+            }
+        };
+
         // Load data anggota
         async function loadAnggota() {
             try {
@@ -444,57 +462,66 @@
             }
         }
 
-        // Load data tabungan dari transaksi
+        // Load data tabungan dari arisan_global
         async function loadTabunganData() {
             const yearFilter = document.getElementById('year-filter').value;
             const memberFilter = document.getElementById('member-filter').value;
 
             try {
-                const snapshot = await get(ref(db, 'transaksi'));
-                if (!snapshot.exists()) {
+                const arisanSnap = await get(ref(db, 'arisan_global'));
+                if (!arisanSnap.exists()) {
                     showNoData();
                     return;
                 }
 
-                const transactions = snapshot.val();
+                const arisanDataGlobal = arisanSnap.val();
+                const iuranBulanan = Array.isArray(arisanDataGlobal.iuran_bulanan) 
+                    ? arisanDataGlobal.iuran_bulanan 
+                    : Object.values(arisanDataGlobal.iuran_bulanan || {});
+
                 tabunganData = [];
 
-                // Filter transaksi tabungan mandiri
-                for (const [trxId, trx] of Object.entries(transactions)) {
-                    if (trx.kategori === 'Tabungan Mandiri' && trx.tipe === 'masuk') {
-                        // Parse deskripsi untuk mendapatkan info anggota dan periode
-                        // Format: [IURAN] Periode YYYY-MM - Nama Anggota (Tabungan)
-                        const deskripsi = trx.deskripsi || '';
-                        const match = deskripsi.match(/\[IURAN\] Periode (\d{4}-\d{2}) - (.+) \(Tabungan\)/);
-                        
-                        if (match) {
-                            const periode = match[1];
-                            const namaAnggota = match[2];
-                            const tahun = periode.split('-')[0];
+                iuranBulanan.forEach(bulan => {
+                    const periode = bulan.periode;
+                    if (!periode) return;
+                    const tahun = periode.split('-')[0];
 
-                            // Filter by year
-                            if (yearFilter && tahun !== yearFilter) continue;
+                    // Filter by year
+                    if (yearFilter && tahun !== yearFilter) return;
 
-                            // Cari anggota berdasarkan nama
-                            const anggota = semuaAnggota.find(a => a.nama === namaAnggota);
-                            if (!anggota) continue;
+                    const pembayaran = Array.isArray(bulan.pembayaran)
+                        ? bulan.pembayaran
+                        : Object.values(bulan.pembayaran || {});
+
+                    pembayaran.forEach(p => {
+                        if (p.paid) {
+                            const anggota = semuaAnggota.find(a => String(a.id) === String(p.memberId));
+                            if (!anggota) return;
 
                             // Filter by member
-                            if (memberFilter && anggota.id !== memberFilter) continue;
+                            if (memberFilter && anggota.id !== memberFilter) return;
 
-                            tabunganData.push({
-                                trxId,
-                                periode,
-                                tahun,
-                                bulan: periode.split('-')[1],
-                                anggotaId: anggota.id,
-                                namaAnggota: anggota.nama,
-                                jumlah: parseInt(trx.jumlah) || 0,
-                                tanggal: trx.tanggal
-                            });
+                            const kom = anggota.iuranKomponen || {};
+                            if (kom.tabungan) {
+                                const nom = p.overrideNominal || anggota.nominalIuran || { tabungan: 5000 };
+                                const tabunganAmount = p.overrideNominal?.tabungan ?? (nom.tabungan || 5000);
+
+                                if (tabunganAmount > 0) {
+                                     tabunganData.push({
+                                        trxId: `${periode}-${anggota.id}`, // synthetic ID
+                                        periode: periode,
+                                        tahun: tahun,
+                                        bulan: periode.split('-')[1],
+                                        anggotaId: anggota.id,
+                                        namaAnggota: anggota.nama,
+                                        jumlah: tabunganAmount,
+                                        tanggal: p.time ? new Date(p.time).toISOString().split('T')[0] : `${periode}-01`
+                                    });
+                                }
+                            }
                         }
-                    }
-                }
+                    });
+                });
 
                 renderTabunganTable();
                 renderMonthlyTable();
@@ -639,6 +666,7 @@
             await loadAnggota();
             await loadTabunganData();
             populateYearFilter();
+            updateTopbarUser();
         }
 
         // Expose functions to window
