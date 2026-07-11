@@ -2,7 +2,7 @@ import { db } from './firebase-config.js';
 
 import { ref, get, set, update, push, remove, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-import { formatRp, toast, cleanNumber, applyMask } from './utils.js';
+import { formatRp, toast, cleanNumber, applyMask, togglePasswordVisibility } from './utils.js';
 
 
 
@@ -36,6 +36,8 @@ let penggunaLogin = null;
 let filterAktif = 'semua', idHapusPending = null;
 
 let openedCardMemberIds = []; // Track opened cards untuk preserve state saat re-render
+
+window.togglePasswordVisibility = togglePasswordVisibility;
 
 
 
@@ -700,9 +702,22 @@ function kartu(anggota, infoPohon = '', data = []) {
     let nasabHtml = '';
     const isTrah = (p) => !!(p.parentId || p.idOrangTua || String(p.generasi) === '0');
 
+    // --- LOGIKA BARU: Tampilkan info orang tua untuk peserta arisan pokok tanpa pasangan ---
+    const ikutArisanPokok = anggota.tipeArisan === 'pokok';
+    const punyaPasangan = anggota.spouseId || anggota.idPasangan || anggota.nikahLintasGen;
+    const parentId = anggota.parentId || anggota.idOrangTua;
+
+    if (ikutArisanPokok && !punyaPasangan && parentId && data.length > 0) {
+        const parent = data.find(p => String(p.id) === String(parentId));
+        if (parent) {
+            const sebutanParent = (isMale(parent)) ? 'Bpk. ' : 'Ibu ';
+            // Format baru sesuai permintaan
+            nasabHtml = `<p class="a-nasab" style="font-style: normal; color: #555;">(Anak dari ${sebutanParent}${parent.nama})</p>`;
+        }
+    }
     // Apply only to direct descendants, not Gen 0 and not in-laws (menantu)
-    if (data.length > 0 && isTrah(anggota) && String(anggota.generasi) !== '0') {
-        const parentId = anggota.parentId || anggota.idOrangTua;
+    // Jika format baru tidak diterapkan, jalankan logika lama untuk 'bin/binti'
+    else if (data.length > 0 && isTrah(anggota) && String(anggota.generasi) !== '0') {
         if (parentId) {
             const parent = data.find(p => String(p.id) === String(parentId));
             if (parent) {
@@ -1400,6 +1415,30 @@ function renderPohonAnggota(data, container, openedPohonIds) {
   const idPasanganDari = (p) => p.idPasangan || p.spouseId;
   const idOrtuDari = (p) => p.idOrangTua || p.parentId;
 
+  // --- Penanganan Khusus untuk Sutiman agar masuk ke Gen 2 ---
+  const sutimanIndex = data.findIndex(p => p.nama && p.nama.toLowerCase() === 'sutiman');
+  // Hanya jalankan jika Sutiman ditemukan dan belum punya orang tua (agar tidak merusak data yang sudah benar)
+  if (sutimanIndex > -1 && !idOrtuDari(data[sutimanIndex])) {
+    // Untuk menempatkannya di Gen 2, ia perlu orang tua dari Gen 1.
+    // Kita akan "mengadopsi" dia ke anak trah pertama dari Gen 1 yang ada.
+    const firstGen1Trah = data
+      .filter(p => String(p.generasi) === '1' && isTrah(p) && !idPasanganDari(p))
+      .sort((a,b) => (parseInt(a.urutan || a.urutan_anak) || 99) - (parseInt(b.urutan || b.urutan_anak) || 99))[0];
+
+    if (firstGen1Trah) {
+      const sutimanData = data[sutimanIndex];
+      sutimanData.parentId = firstGen1Trah.id;
+      sutimanData.idOrangTua = firstGen1Trah.id;
+      sutimanData.generasi = '2'; // Paksa ke Generasi 2
+      // Beri urutan anak yang besar agar muncul di akhir
+      if (!sutimanData.urutan && !sutimanData.urutan_anak) {
+        sutimanData.urutan = 99;
+        sutimanData.urutan_anak = 99;
+      }
+    }
+  }
+  // --- Akhir Penanganan Khusus ---
+
   // --- Inferensi motherId untuk anak-anak dari keluarga poligami ---
   // idOrangTua/parentId anak biasanya menunjuk ke AYAH, sehingga tanpa langkah ini
   // anak-anak tidak bisa dikelompokkan di bawah ibu kandungnya masing-masing.
@@ -1537,34 +1576,48 @@ window.renderAnggota = async function() {
 
   const data = await window.ambilData();
 
-  
+  // Hitung anggota per generasi (trah vs pasangan)
+  const perGen = {};
+  const isTrah = (p) => !!(p.parentId || p.idOrangTua || String(p.generasi) === '0');
+
+  data.forEach(a => {
+    const g = a.generasi || '0';
+    if(!perGen[g]) perGen[g] = { trah: 0, pasangan: 0, total: 0 };
+    
+    if (isTrah(a)) {
+      perGen[g].trah++;
+    } else {
+      perGen[g].pasangan++;
+    }
+    perGen[g].total++;
+  });
+
+  const summaryCardHtml = `
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 1.5rem;">
+      ${Object.keys(perGen).sort((a,b) => a - b).map(g => `
+        <div class="stat-card" style="padding: 1rem; text-align: center;">
+          <p class="stat-lbl" style="font-size: 0.65rem;">Generasi ${g}</p>
+          <p class="stat-num" style="font-size: 1.4rem; margin-top: 4px; margin-bottom: 8px;">${perGen[g].total}</p>
+          <p class="stat-sub" style="font-size: 0.6rem; line-height: 1.3; margin-top: auto;">${perGen[g].trah} Trah &bull; ${perGen[g].pasangan} Pasangan</p>
+        </div>
+      `).join('')}
+    </div>
+  `;
 
   // SIMPAN STATE CARD YANG TERBUKA SEBELUM RENDER (PALING AWAL!)
 
   const openedStackIds = new Set();
-
   document.querySelectorAll('.a-card-stack.terbuka').forEach(cardStack => {
-
     const id = cardStack.getAttribute('data-anggota-id');
-
     if (id) openedStackIds.add(id);
-
   });
-
-
 
   // SIMPAN STATE NODE POHON KELUARGA YANG SEDANG TERBUKA (sebelum render ulang)
-
   const openedPohonIds = new Set();
-
   document.querySelectorAll('.pohon-node.buka').forEach(node => {
-
     const id = node.getAttribute('data-id');
-
     if (id) openedPohonIds.add(id);
-
   });
-
 
 
   // LOGIKA KHUSUS HALAMAN PENGURUS (MANAJEMEN JABATAN)
@@ -1778,12 +1831,7 @@ window.renderAnggota = async function() {
 
 
 
-  // Fungsi pembantu untuk cek apakah anggota adalah jalur keturunan (Trah)
-
-  const isTrah = (p) => !!(p.parentId || p.idOrangTua || String(p.generasi) === '0');
-
-
-
+  
   // ============================================================
 
   // MODE POHON KELUARGA (gaya Family Gem): kartu induk diklik -> muncul
@@ -1801,6 +1849,8 @@ window.renderAnggota = async function() {
   if (filterAktif === 'semua' && !cari) {
 
     renderPohonAnggota(data, container, openedPohonIds);
+    // Prepend the summary card to the rendered content
+    container.innerHTML = summaryCardHtml + container.innerHTML;
 
     return;
 
@@ -1900,19 +1950,17 @@ window.renderAnggota = async function() {
 
 
 
-  const perGen = {};
+  const grupedData = {};
 
   if (filterAktif === 'wafat') {
-
-    perGen['wafat'] = filtered;
+grupedData['wafat'] = filtered;
 
   } else {
 
     filtered.forEach(a => {
 
-      if (!perGen[a.generasi]) perGen[a.generasi] = [];
-
-      perGen[a.generasi].push(a);
+      if (!groupedData[a.generasi]) groupedData[a.generasi] = [];
+      groupedData[a.generasi].push(a);
 
     });
 
@@ -1922,7 +1970,7 @@ window.renderAnggota = async function() {
 
   let htmlOutput = '';
 
-  Object.keys(perGen).sort().forEach(g => {
+  Object.keys(groupedData).sort().forEach(g => {
 
     // Selalu buka semua generasi 0-7
 
@@ -1934,7 +1982,7 @@ window.renderAnggota = async function() {
 
     const renderedIds = new Set();
 
-    const members = perGen[g];
+    const members = groupedData[g];
 
     let lastParentId = null;
     let lastMotherId = null;
@@ -2262,7 +2310,7 @@ window.renderAnggota = async function() {
 
   // Simpan ID dari card stack yang terbuka sebelum render
 
-  container.innerHTML = htmlOutput;
+  container.innerHTML = summaryCardHtml + htmlOutput;
 
   
 
@@ -3656,8 +3704,10 @@ window.updateFormOptions = async function(curParentId = "", curSpouseId = "", cu
       const isNotSelf = String(a.id) !== String(currentMemberId);
 
       const isTrah = !!(a.parentId || a.idOrangTua || String(a.generasi) === '0');
+      // KHUSUS: Izinkan Sutiman menjadi orang tua meskipun bukan trah asli
+      const isSutiman = a.nama && a.nama.toLowerCase() === 'sutiman';
 
-      return isPrevGen && isNotSelf && isTrah;
+      return isPrevGen && isNotSelf && (isTrah || isSutiman);
 
     }).forEach(p => {
 
@@ -4066,35 +4116,6 @@ window.simpanAnggota = async function() {
   window.renderAnggota();
 
 };
-
-
-
-window.togglePasswordVisibility = function(inputId, btn) {
-
-  const input = document.getElementById(inputId);
-
-  const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
-
-  const eyeOffIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`;
-
-
-
-  if (input.type === 'password') {
-
-    input.type = 'text';
-
-    btn.innerHTML = eyeOffIcon;
-
-  } else {
-
-    input.type = 'password';
-
-    btn.innerHTML = eyeIcon;
-
-  }
-
-};
-
 // FUNGSI GANTI PASSWORD DARI HALAMAN LOGIN
 window.gantiPasswordDariLogin = async function() {
   const passLama = document.getElementById('input-pass-lama-ganti')?.value?.trim();

@@ -74,7 +74,18 @@ window.renderBukuKasArisan = function() {
         let totalTabunganPeriode = 0;
         let jumlahOrangSosial = 0;
         let jumlahOrangTabungan = 0;
-        const tglPeriode = bulan.periode ? `${bulan.periode}-01` : new Date().toISOString().split('T')[0];
+        // PERBAIKAN: Menggunakan tanggal akhir bulan dari periode, bukan tanggal 1.
+        // Ini lebih akurat untuk merepresentasikan transaksi rekapitulasi bulanan.
+        let tglPeriode;
+        if (bulan.periode && bulan.periode.includes('-')) {
+            const [year, month] = bulan.periode.split('-');
+            // new Date(year, month, 0) akan menghasilkan tanggal terakhir dari bulan yang sesuai.
+            // Contoh: jika month adalah '05' (Mei), parseInt(month) adalah 5. new Date(year, 5, 0) akan menghasilkan 31 Mei.
+            const lastDay = new Date(year, parseInt(month), 0).getDate();
+            tglPeriode = `${bulan.periode}-${String(lastDay).padStart(2, '0')}`;
+        } else {
+            tglPeriode = new Date().toISOString().split('T')[0]; // Fallback jika format periode tidak sesuai
+        }
 
         pembayaran.forEach(p => {
             if (p.paid) {

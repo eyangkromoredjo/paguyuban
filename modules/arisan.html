@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -289,6 +289,20 @@
             <!-- PANEL DAFTAR PESERTA -->
             <div class="panel" id="panel-daftar-peserta">
                 <h3>Daftar <em>Peserta Aktif</em></h3>
+                <div class="stats-grid" id="peserta-summary-cards" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem;">
+                    <div class="stat-card">
+                        <span class="stat-lbl">Anggota Pokok Aktif</span>
+                        <div class="stat-num" id="total-peserta-pokok" style="font-size: 1.5rem;">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-lbl">Anggota Non-Pokok Aktif</span>
+                        <div class="stat-num" id="total-peserta-nonpokok" style="font-size: 1.5rem;">0</div>
+                    </div>
+                    <div class="stat-card" style="border-top-color: var(--accent-orange);">
+                        <span class="stat-lbl">Total Peserta Aktif</span>
+                        <div class="stat-num" id="total-peserta-aktif" style="font-size: 1.5rem; color: var(--accent-orange);">0</div>
+                    </div>
+                </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 10px;">
                     <input type="text" id="search-peserta" class="form-control" placeholder="Cari nama anggota..." oninput="window.renderPesertaTable()" style="flex:1; min-width: 200px;">
                     <button class="btn-primary" id="btn-atur-peserta" onclick="window.bukaFormAturPeserta()">+ Atur Peserta</button>
@@ -1149,6 +1163,20 @@ function renderPesertaTable() {
         return;
     }
 
+    // Update summary cards
+    const pesertaAktif = window.semuaAnggota.filter(m => m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok');
+    const pesertaPokok = pesertaAktif.filter(m => m.tipeArisan === 'pokok').length;
+    const pesertaNonPokok = pesertaAktif.filter(m => m.tipeArisan === 'non-pokok').length;
+    const totalPeserta = pesertaPokok + pesertaNonPokok;
+
+    const elPokok = document.getElementById('total-peserta-pokok');
+    const elNonPokok = document.getElementById('total-peserta-nonpokok');
+    const elTotal = document.getElementById('total-peserta-aktif');
+
+    if (elPokok) elPokok.textContent = pesertaPokok;
+    if (elNonPokok) elNonPokok.textContent = pesertaNonPokok;
+    if (elTotal) elTotal.textContent = totalPeserta;
+
     const rows = window.semuaAnggota
         .filter(m => (m.tipeArisan === 'pokok' || m.tipeArisan === 'non-pokok'))
         .filter(m => m.nama.toLowerCase().includes(cari))
@@ -1976,13 +2004,6 @@ window.simpanEditPembayaran = async function() {
     
     // Sync to ledger with SUMMARY logic
     const user = JSON.parse(sessionStorage.getItem('kromoredjo_user'));
-    const periodeId = periode.replace(/-/g, '_');
-    const tglPeriode = `${periode}-01`;
-
-    // 1. Recalculate totals for the entire period
-    let totalArisanPeriode = 0;
-    let totalSosialPeriode = 0;
-    let totalTabunganPeriode = 0;
     let jumlahOrangArisan = 0;
     let jumlahOrangSosial = 0;
     let jumlahOrangTabungan = 0;
@@ -1990,6 +2011,13 @@ window.simpanEditPembayaran = async function() {
     const iuranBulanIniUpdated = window.storageArisan.iuran_bulanan.find(e => e.periode === periode);
     if (iuranBulanIniUpdated && iuranBulanIniUpdated.pembayaran) {
         const pembayaran = Array.isArray(iuranBulanIniUpdated.pembayaran) ? iuranBulanIniUpdated.pembayaran : Object.values(iuranBulanIniUpdated.pembayaran);
+        
+        // 1. Recalculate totals for the entire period
+        let totalArisanPeriode = 0;
+        let totalSosialPeriode = 0;
+        let totalTabunganPeriode = 0;
+        let lastPaymentTime = 0;
+
         for (const p of pembayaran) {
             if (p.paid) {
                 const member = window.semuaAnggota.find(a => String(a.id) === String(p.memberId));
@@ -2016,12 +2044,22 @@ window.simpanEditPembayaran = async function() {
                         totalTabunganPeriode += tabunganAmount;
                         jumlahOrangTabungan++;
                     }
+
+                    // Find the latest payment date in this period
+                    if (p.time && p.time > lastPaymentTime) {
+                        lastPaymentTime = p.time;
+                    }
                 }
             }
         }
-    }
 
-    // 2. Find and delete old summary transactions for this period
+        // Determine the transaction date for the ledger
+        const tglPeriode = lastPaymentTime > 0 
+            ? new Date(lastPaymentTime).toISOString().split('T')[0] 
+            : `${periode}-01`; // Fallback to the 1st of the month
+        const periodeId = periode.replace(/-/g, '_');
+
+        // 2. Find and delete old summary transactions for this period
     const originIdArisan = `iuran_summary_${periodeId}_arisan`;
     const originIdSosial = `iuran_summary_${periodeId}_sosial`;
     const originIdTabungan = `iuran_summary_${periodeId}_tabungan`;
@@ -2036,15 +2074,16 @@ window.simpanEditPembayaran = async function() {
         }
     }
 
-    // 3. Create new summary transactions
-    // Iuran Arisan tidak dimasukkan ke buku besar sesuai permintaan.
-    if (totalSosialPeriode > 0) {
-        const deskripsi = `Total pemasukan Dana Sosial (${periode}), ${jumlahOrangSosial} orang`;
-        await set(push(ref(db, "transaksi")), { tanggal: tglPeriode, deskripsi, jumlah: totalSosialPeriode, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: originIdSosial });
-    }
-    if (totalTabunganPeriode > 0) {
-        const deskripsi = `Total pemasukan Tabungan Mandiri (${periode}), ${jumlahOrangTabungan} orang`;
-        await set(push(ref(db, "transaksi")), { tanggal: tglPeriode, deskripsi, jumlah: totalTabunganPeriode, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: originIdTabungan });
+        // 3. Create new summary transactions
+        // Iuran Arisan tidak dimasukkan ke buku besar sesuai permintaan.
+        if (totalSosialPeriode > 0) {
+            const deskripsi = `Total pemasukan Dana Sosial (${periode}), ${jumlahOrangSosial} orang`;
+            await set(push(ref(db, "transaksi")), { tanggal: tglPeriode, deskripsi, jumlah: totalSosialPeriode, kategori: 'Sosial', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: originIdSosial });
+        }
+        if (totalTabunganPeriode > 0) {
+            const deskripsi = `Total pemasukan Tabungan Mandiri (${periode}), ${jumlahOrangTabungan} orang`;
+            await set(push(ref(db, "transaksi")), { tanggal: tglPeriode, deskripsi, jumlah: totalTabunganPeriode, kategori: 'Tabungan Mandiri', tipe: 'masuk', inputOleh: user.nama, createdAt: Date.now(), originId: originIdTabungan });
+        }
     }
 
     window.tutupModal('modal-edit-pembayaran');
