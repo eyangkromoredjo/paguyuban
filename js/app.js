@@ -21,7 +21,7 @@ const HAK_AKSES = {
 
   admin:    { tambah: true,  edit: true,  hapus: true,  kelolaAkun: true },
 
-  pengurus: { tambah: true,  edit: false,  hapus: false, kelolaAkun: false },
+  pengurus: { tambah: true,  edit: true,  hapus: true, kelolaAkun: false },
 
   anggota:  { tambah: true,  edit: false, hapus: false, kelolaAkun: false },
 
@@ -49,6 +49,14 @@ window.ambilData = async function() {
 
   return snapshot.exists() ? Object.values(snapshot.val()) : [];
 
+};
+
+// Test function untuk verify bukaEdit accessible
+window.testBukaEdit = function() {
+  console.log('[TEST] window.bukaEdit exists:', typeof window.bukaEdit);
+  console.log('[TEST] window.bukaEdit:', window.bukaEdit);
+  console.log('[TEST] penggunaLogin:', penggunaLogin);
+  console.log('[TEST] HAK_AKSES:', HAK_AKSES);
 };
 
 
@@ -93,62 +101,60 @@ async function simpanSatu(anggota) {
 
 window.handleLogin = async function() {
 
+  console.log('[LOGIN] Memulai proses login...');
+
   const uInput = document.getElementById('input-username').value.trim().toLowerCase();
 
   const pInput = document.getElementById('input-pass').value;
 
+  console.log('[LOGIN] Username input:', uInput);
   
+  if (!uInput || !pInput) {
+    toast("Silakan isi username dan password!");
+    return;
+  }
 
   // Cek Akun Master
 
   const master = AKUN_MASTER.find(a => a.username.toLowerCase() === uInput && a.password === pInput);
 
-  if (master) return proceedLogin(master);
+  if (master) {
+    console.log('[LOGIN] Master account found:', master.username);
+    return proceedLogin(master);
+  }
 
-
+  console.log('[LOGIN] Master account tidak cocok, cek Firebase...');
 
   // Cek Anggota di Firebase
+  try {
+    const data = await window.ambilData();
+    console.log('[LOGIN] Data dari Firebase:', data.length, 'records');
 
-  const data = await window.ambilData();
+    const user = data.find(m =>
+      m.bolehDaftar &&
+      m.password === pInput &&
+      (
+        (m.nama && m.nama.toLowerCase() === uInput) ||
+        (m.panggilan && m.panggilan.toLowerCase() === uInput)
+      )
+    );
 
-  const user = data.find(m =>
-
-    m.bolehDaftar &&
-
-    m.password === pInput &&
-
-    (
-
-      (m.nama && m.nama.toLowerCase() === uInput) ||
-
-      (m.panggilan && m.panggilan.toLowerCase() === uInput)
-
-    )
-
-  );
-
-
-
-  if (user) {
-
-    proceedLogin({
-
-      id: user.id,
-
-      username: user.panggilan,
-
-      nama: user.nama,
-
-      level: user.level || 'anggota'
-
-    });
-
-  } else {
-
-    document.getElementById('pesan-error').style.display = 'block';
-
-    toast("Login Gagal: Username atau Password salah.");
-
+    if (user) {
+      console.log('[LOGIN] User found:', user.nama);
+      proceedLogin({
+        id: user.id,
+        username: user.panggilan || user.nama,
+        nama: user.nama,
+        level: user.level || 'anggota'
+      });
+    } else {
+      console.log('[LOGIN] User tidak ditemukan');
+      document.getElementById('pesan-error').style.display = 'block';
+      toast("Login Gagal: Username atau Password salah.");
+    }
+  } catch (error) {
+    console.error('[LOGIN ERROR]', error);
+    toast("Error saat login: " + error.message);
   }
 
 };
@@ -1415,12 +1421,13 @@ function renderPohonAnggota(data, container, openedPohonIds) {
   const idPasanganDari = (p) => p.idPasangan || p.spouseId;
   const idOrtuDari = (p) => p.idOrangTua || p.parentId;
 
-  // --- Penanganan Khusus untuk Sutiman agar masuk ke Gen 2 ---
+  // NOTE: Sutiman auto-assignment dimatikan agar tetap di kategori "Lainnya (belum terhubung silsilah)"
+  // sampai admin secara manual mengatur parent/garis keturunannya dengan benar.
+  // Ini memastikan hanya anggota dengan data silsilah yang jelas yang tampil di pohon keluarga.
+  // Jika ingin enable kembali auto-assignment, uncomment block di bawah:
+  /*
   const sutimanIndex = data.findIndex(p => p.nama && p.nama.toLowerCase() === 'sutiman');
-  // Hanya jalankan jika Sutiman ditemukan dan belum punya orang tua (agar tidak merusak data yang sudah benar)
   if (sutimanIndex > -1 && !idOrtuDari(data[sutimanIndex])) {
-    // Untuk menempatkannya di Gen 2, ia perlu orang tua dari Gen 1.
-    // Kita akan "mengadopsi" dia ke anak trah pertama dari Gen 1 yang ada.
     const firstGen1Trah = data
       .filter(p => String(p.generasi) === '1' && isTrah(p) && !idPasanganDari(p))
       .sort((a,b) => (parseInt(a.urutan || a.urutan_anak) || 99) - (parseInt(b.urutan || b.urutan_anak) || 99))[0];
@@ -1429,14 +1436,14 @@ function renderPohonAnggota(data, container, openedPohonIds) {
       const sutimanData = data[sutimanIndex];
       sutimanData.parentId = firstGen1Trah.id;
       sutimanData.idOrangTua = firstGen1Trah.id;
-      sutimanData.generasi = '2'; // Paksa ke Generasi 2
-      // Beri urutan anak yang besar agar muncul di akhir
+      sutimanData.generasi = '2';
       if (!sutimanData.urutan && !sutimanData.urutan_anak) {
         sutimanData.urutan = 99;
         sutimanData.urutan_anak = 99;
       }
     }
   }
+  */
   // --- Akhir Penanganan Khusus ---
 
   // --- Inferensi motherId untuk anak-anak dari keluarga poligami ---
@@ -1815,7 +1822,8 @@ window.renderAnggota = async function() {
 
   // LOGIKA DAFTAR ANGGOTA BIASA
 
-  const cari = (document.getElementById('search-anggota')?.value || '').toLowerCase();
+  const searchInput = document.getElementById('search-anggota');
+  const cari = (searchInput?.value || '').toLowerCase();
 
   const container = document.getElementById('daftar-anggota');
 
@@ -1914,7 +1922,7 @@ window.renderAnggota = async function() {
 
       let isMatch = checkMatch(a);
 
-      
+
 
       // Tetap tampilkan jika pasangannya yang cocok dengan pencarian (agar stack tetap utuh)
 
@@ -1928,7 +1936,7 @@ window.renderAnggota = async function() {
 
       }
 
-      
+
 
       const matchGen = filterAktif === 'semua' ? true : (filterAktif === 'wafat' ? a.kehidupan === 'wafat' : a.generasi == filterAktif);
 
@@ -1948,7 +1956,16 @@ window.renderAnggota = async function() {
 
   }
 
-
+  // When searching, simplify display - just show cards without complex grouping
+  if (cari) {
+    let simpleHtml = '<div class="anggota-grid">';
+    filtered.forEach(a => {
+      simpleHtml += kartu(a, '', data);
+    });
+    simpleHtml += '</div>';
+    container.innerHTML = simpleHtml;
+    return;
+  }
 
   const grupedData = {};
 
@@ -3364,14 +3381,17 @@ window.bukaPanel = function(nama, el, pushState = true) {
 
   if (nama === 'anggota') {
 
-    // Jika navigasi baru dari menu utama, arahkan ke hub menu dengan history state
-
+    // Jika navigasi baru dari menu utama, arahkan langsung ke daftar anggota
     if (pushState) {
 
-      window.switchSubPanelAnggota('menu', true);
+      window.switchSubPanelAnggota('daftar', true);
 
       return; // Navigasi selanjutnya dihandle oleh switchSubPanelAnggota
 
+    } else {
+      // Jika tidak pushState, pastikan menampilkan daftar dan update title
+      const title = document.getElementById('anggota-panel-title');
+      if (title) title.innerHTML = 'Daftar <em>Anggota</em>';
     }
 
   }
@@ -3396,8 +3416,6 @@ window.bukaPanel = function(nama, el, pushState = true) {
 
 window.switchSubPanelAnggota = function(sub, pushState = true) {
 
-  const menu = document.getElementById('section-anggota-menu');
-
   const listSub = document.getElementById('sub-panel-daftar');
 
   const pengurusSub = document.getElementById('sub-panel-pengurus');
@@ -3410,11 +3428,9 @@ window.switchSubPanelAnggota = function(sub, pushState = true) {
 
   const title = document.getElementById('anggota-panel-title');
 
-  
+
 
   // Sembunyikan semua sub-section terlebih dahulu
-
-  if (menu) menu.style.display = 'none';
 
   if (listSub) listSub.style.display = 'none';
 
@@ -3432,11 +3448,11 @@ window.switchSubPanelAnggota = function(sub, pushState = true) {
 
   if (sub === 'menu') {
 
-    if (menu) menu.style.display = 'block';
+    // Menu sudah dihapus, langsung ke daftar
+    sub = 'daftar';
+  }
 
-    if (title) title.innerHTML = 'Manajemen <em>Keluarga</em>';
-
-  } else if (sub === 'daftar') {
+  if (sub === 'daftar') {
 
     filterAktif = 'semua';
 
@@ -3445,6 +3461,10 @@ window.switchSubPanelAnggota = function(sub, pushState = true) {
     if (btnTambahAnggota) btnTambahAnggota.style.display = 'block'; // Tampilkan di sini
 
     if (title) title.innerHTML = 'Daftar <em>Anggota</em>';
+
+    // Clear search input when opening daftar
+    const searchInput = document.getElementById('search-anggota');
+    if (searchInput) searchInput.value = '';
 
     window.renderAnggota();
 
@@ -3615,15 +3635,12 @@ window.addEventListener('load', () => {
 
 window.toggleTglWafat = function() {
 
-  const v = document.getElementById('form-kehidupan').value;
-
+  const v = document.getElementById('form-kehidupan')?.value;
   const g = document.getElementById('group-tgl-wafat');
-
   const inp = document.getElementById('form-tgl-wafat');
 
-  g.style.opacity = v === 'wafat' ? '1' : '.3';
-
-  inp.disabled = v !== 'wafat';
+  if (g) g.style.opacity = v === 'wafat' ? '1' : '.3';
+  if (inp) inp.disabled = v !== 'wafat';
 
 };
 
@@ -3801,122 +3818,144 @@ window.updateFormOptions = async function(curParentId = "", curSpouseId = "", cu
 
 window.bukaEdit = async function(id) {
 
-  const data = await window.ambilData();
+  console.log('[DEBUG bukaEdit] Memulai edit untuk ID:', id);
 
-  const a = data.find(x => String(x.id) === String(id));
+  try {
+    const data = await window.ambilData();
+    console.log('[DEBUG bukaEdit] Data loaded, total:', data.length);
 
-  if(!a) return;
+    const a = data.find(x => String(x.id) === String(id));
+    console.log('[DEBUG bukaEdit] Anggota ditemukan:', a?.nama, 'ID:', a?.id);
 
-  const isMale = (p) => p.gender === 'L';
-  const isFemale = (p) => p.gender === 'P';
-
-
-
-  // Cek apakah target anggota adalah pengurus atau admin
-  const isTargetPengurus = a.level === 'pengurus' || a.level === 'admin';
-  
-  // Hanya admin dan pengurus yang bisa edit data pengurus/admin
-  if (isTargetPengurus && penggunaLogin.level === 'anggota') {
-    return toast("Hanya Admin dan Pengurus yang dapat mengedit data Pengurus.");
-  }
-
-  const isOwner = a.createdBy === penggunaLogin.username;
-
-  const canEdit = HAK_AKSES[penggunaLogin.level]?.edit || (penggunaLogin.level === 'anggota' && isOwner);
-
-
-
-  if (!canEdit) return toast("Anda tidak memiliki akses ini.");
-
-
-
-  document.getElementById('modal-judul-form').textContent = 'Edit Data Anggota';
-
-  document.getElementById('form-id').value = a.id;
-
-  document.getElementById('form-nama').value = a.nama;
-
-  document.getElementById('form-panggilan').value = a.panggilan || '';
-
-  document.getElementById('form-generasi').value = a.generasi;
-
-  document.getElementById('form-urutan').value = a.urutan || '';
-
-  document.getElementById('form-hp').value = a.hp || '';
-
-  document.getElementById('form-lahir').value = a.tanggalLahir || a.lahir || '';
-
-  document.getElementById('form-alamat').value = a.alamat || '';
-
-  document.getElementById('form-foto').value = a.foto || '';
-
-  document.getElementById('form-status').value = a.status || 'aktif';
-
-  document.getElementById('form-kehidupan').value = a.kehidupan || 'hidup';
-
-  document.getElementById('form-tgl-wafat').value = a.tglWafat || '';
-
-  document.getElementById('form-nikah-lintas-gen').checked = a.nikahLintasGen || false;
-
-  document.getElementById('form-id-pasangan-lintas-gen').value = a.idPasanganLintasGen || '';
-
-  // Toggle pasangan lintas gen row visibility
-  const rowPasanganLintasGen = document.getElementById('row-pasangan-lintas-gen');
-  if (rowPasanganLintasGen) {
-    rowPasanganLintasGen.style.display = a.nikahLintasGen ? 'flex' : 'none';
-  }
-
-  const genderRadio = document.querySelector(`input[name="form-gender"][value="${a.gender || 'L'}"]`);
-
-  if(genderRadio) genderRadio.checked = true;
-
-  window.toggleTglWafat();
-  
-  // START: New logic to find father and mother
-  let fatherId = null;
-  let motherId = a.motherId || null; // Use stored motherId if available
-  const parentId = a.parentId || a.idOrangTua;
-
-  if (parentId) {
-      const parent = data.find(p => String(p.id) === String(parentId));
-      if (parent) {
-          if (isMale(parent)) {
-              fatherId = parent.id;
-              // If motherId not already stored, try to find it from wives
-              if (!motherId) {
-                  const idPasanganDari = (p) => p.idPasangan || p.spouseId;
-                  const wives = data.filter(w => {
-                      const spouseId = idPasanganDari(w);
-                      return isFemale(w) && String(spouseId) === String(parent.id);
-                  });
-                  if (wives.length === 1) {
-                      motherId = wives[0].id;
-                  }
-              }
-          } else { // parent is mother
-              if (!motherId) motherId = parent.id;
-              const idPasanganDari = (p) => p.idPasangan || p.spouseId;
-              const sId = idPasanganDari(parent);
-              let father = sId ? data.find(f => String(f.id) === String(sId)) : null;
-              if (!father) {
-                  father = data.find(f => String(idPasanganDari(f)) === String(parent.id) && isMale(f));
-              }
-              if (father) fatherId = father.id;
-          }
-      }
-  }
-  // END: New logic
-  await window.updateFormOptions(fatherId, a.spouseId || a.idPasangan, a.idPasanganLintasGen, motherId);
-  
-  // Set ibu kandung field value after updateFormOptions populates it
-  if (motherId) {
-    const selectIbuKandung = document.getElementById('form-id-ibu');
-    if (selectIbuKandung) {
-      selectIbuKandung.value = motherId;
+    if(!a) {
+      toast("Data anggota tidak ditemukan!");
+      return;
     }
+
+    const isMale = (p) => p.gender === 'L';
+    const isFemale = (p) => p.gender === 'P';
+
+    // Cek apakah target anggota adalah pengurus atau admin
+    const isTargetPengurus = a.level === 'pengurus' || a.level === 'admin';
+    
+    // Hanya admin dan pengurus yang bisa edit data pengurus/admin
+    if (isTargetPengurus && penggunaLogin.level === 'anggota') {
+      return toast("Hanya Admin dan Pengurus yang dapat mengedit data Pengurus.");
+    }
+
+    const isOwner = a.createdBy === penggunaLogin.username;
+
+    const canEdit = HAK_AKSES[penggunaLogin.level]?.edit || (penggunaLogin.level === 'anggota' && isOwner);
+    console.log('[DEBUG bukaEdit] canEdit:', canEdit, 'level:', penggunaLogin.level);
+
+    if (!canEdit) return toast("Anda tidak memiliki akses ini.");
+
+    console.log('[DEBUG bukaEdit] Mulai isi form...');
+
+    const setFieldValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) {
+        console.warn(`[DEBUG] Element ${id} tidak ditemukan!`);
+        return false;
+      }
+      el.value = value;
+      return true;
+    };
+
+    const modalJudulForm = document.getElementById('modal-judul-form');
+    if (modalJudulForm) modalJudulForm.textContent = 'Edit Data Anggota';
+
+    setFieldValue('form-id', a.id);
+    setFieldValue('form-nama', a.nama);
+    setFieldValue('form-panggilan', a.panggilan || '');
+    setFieldValue('form-generasi', a.generasi);
+    setFieldValue('form-urutan', a.urutan || '');
+    setFieldValue('form-telepon', a.hp || a.telepon || '');
+    setFieldValue('form-lahir', a.tanggalLahir || a.lahir || '');
+    setFieldValue('form-domisili', a.domisili || '');
+    setFieldValue('form-pekerjaan', a.pekerjaan || '');
+    setFieldValue('form-email', a.email || '');
+    setFieldValue('form-status', a.status || 'aktif');
+    setFieldValue('form-kehidupan', a.kehidupan || 'hidup');
+    setFieldValue('form-wafat', a.tglWafat || '');
+    setFieldValue('form-jabatan', a.jabatan || '');
+    setFieldValue('form-level', a.level || '');
+    setFieldValue('form-password', a.password || '');
+    setFieldValue('form-catatan', a.catatan || '');
+    setFieldValue('form-id-pasangan-lintas-gen', a.idPasanganLintasGen || '');
+
+    const nikahCheckbox = document.getElementById('form-nikah-lintas-gen');
+    if (nikahCheckbox) nikahCheckbox.checked = a.nikahLintasGen || false;
+
+    // Toggle pasangan lintas gen row visibility
+    const rowPasanganLintasGen = document.getElementById('row-pasangan-lintas-gen');
+    if (rowPasanganLintasGen) {
+      rowPasanganLintasGen.style.display = a.nikahLintasGen ? 'flex' : 'none';
+    }
+
+    const genderRadio = document.querySelector(`input[name="form-gender"][value="${a.gender || 'L'}"]`);
+    if(genderRadio) genderRadio.checked = true;
+
+    if (window.toggleTglWafat) window.toggleTglWafat();
+    
+    // START: New logic to find father and mother
+    let fatherId = null;
+    let motherId = a.motherId || null; // Use stored motherId if available
+    const parentId = a.parentId || a.idOrangTua;
+
+    if (parentId) {
+        const parent = data.find(p => String(p.id) === String(parentId));
+        if (parent) {
+            if (isMale(parent)) {
+                fatherId = parent.id;
+                // If motherId not already stored, try to find it from wives
+                if (!motherId) {
+                    const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+                    const wives = data.filter(w => {
+                        const spouseId = idPasanganDari(w);
+                        return isFemale(w) && String(spouseId) === String(parent.id);
+                    });
+                    if (wives.length === 1) {
+                        motherId = wives[0].id;
+                    }
+                }
+            } else { // parent is mother
+                if (!motherId) motherId = parent.id;
+                const idPasanganDari = (p) => p.idPasangan || p.spouseId;
+                const sId = idPasanganDari(parent);
+                let father = sId ? data.find(f => String(f.id) === String(sId)) : null;
+                if (!father) {
+                    father = data.find(f => String(idPasanganDari(f)) === String(parent.id) && isMale(f));
+                }
+                if (father) fatherId = father.id;
+            }
+        }
+    }
+    // END: New logic
+
+    console.log('[DEBUG bukaEdit] Memanggil updateFormOptions dengan fatherId:', fatherId);
+    try {
+      await window.updateFormOptions(fatherId, a.spouseId || a.idPasangan, a.idPasanganLintasGen, motherId);
+    } catch (formError) {
+      console.warn('[DEBUG bukaEdit] updateFormOptions error (non-critical):', formError);
+    }
+    
+    // Set ibu kandung field value after updateFormOptions populates it
+    if (motherId) {
+      const selectIbuKandung = document.getElementById('form-id-ibu');
+      if (selectIbuKandung) {
+        selectIbuKandung.value = motherId;
+      }
+    }
+    
+    console.log('[DEBUG bukaEdit] Form sudah diisi, membuka modal...');
+    window.bukaModal('modal-anggota');
+    console.log('[DEBUG bukaEdit] Modal dibuka!');
+
+  } catch (error) {
+    console.error('[ERROR bukaEdit]', error);
+    toast('Error: ' + error.message);
   }
-  
-  window.bukaModal('modal-anggota');
 
 };
 
@@ -3928,25 +3967,29 @@ window.bukaKonfirmasiHapus = function(id, nama) {
 
   idHapusPending = id;
 
-  document.getElementById('konfirm-nama').textContent = nama;
+  const konfirmTeks = document.querySelector('#modal-hapus-anggota .konfirm-teks');
+  if (konfirmTeks) {
+    konfirmTeks.textContent = `Apakah Anda yakin ingin menghapus anggota "${nama}"? Tindakan ini tidak dapat dibatalkan.`;
+  }
 
-  window.bukaModal('modal-hapus');
+  window.bukaModal('modal-hapus-anggota');
 
 };
 
 
 
-window.konfirmasiHapus = async function() {
+window.konfirmasiHapusAnggota = async function() {
 
   if(!idHapusPending) return;
 
   await remove(ref(db, "anggota/" + idHapusPending));
 
+  const namaHapus = idHapusPending;
   idHapusPending = null;
 
-  window.tutupModal('modal-hapus');
+  window.tutupModal('modal-hapus-anggota');
 
-  catatLog("Hapus Anggota", "Menghapus ID: " + idHapusPending);
+  catatLog("Hapus Anggota", "Menghapus ID: " + namaHapus);
 
   window.renderAnggota();
 
@@ -4071,15 +4114,23 @@ window.simpanAnggota = async function() {
 
     kehidupan: kh,
 
-    tglWafat: kh === 'wafat' ? document.getElementById('form-tgl-wafat').value : '',
+    tglWafat: kh === 'wafat' ? document.getElementById('form-wafat')?.value || '' : '',
 
-    hp: document.getElementById('form-hp').value.trim(),
+    telepon: document.getElementById('form-telepon')?.value?.trim() || '',
 
-    tanggalLahir: document.getElementById('form-lahir').value,
+    tanggalLahir: document.getElementById('form-lahir')?.value || '',
 
-    alamat: document.getElementById('form-alamat').value.trim(),
+    domisili: document.getElementById('form-domisili')?.value?.trim() || '',
 
-    foto: document.getElementById('form-foto').value.trim(),
+    pekerjaan: document.getElementById('form-pekerjaan')?.value?.trim() || '',
+
+    email: document.getElementById('form-email')?.value?.trim() || '',
+
+    jabatan: document.getElementById('form-jabatan')?.value?.trim() || '',
+
+    level: document.getElementById('form-level')?.value || '',
+
+    catatan: document.getElementById('form-catatan')?.value?.trim() || '',
 
     updatedAt: Date.now(),
 
@@ -4423,5 +4474,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize filters and other dynamic elements
     if (document.getElementById('filter-mulai-bulan')) {
         populateLedgerFilters();
+    }
+
+    // Initialize search input event listener
+    const searchInput = document.getElementById('search-anggota');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            console.log('Search input event triggered:', this.value);
+            window.renderAnggota();
+        });
+        searchInput.addEventListener('keyup', function() {
+            console.log('Search keyup event triggered:', this.value);
+            window.renderAnggota();
+        });
     }
 });
