@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArisanKu - PKEK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <style>
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text-dark); }
+    .konten-utama { margin-left: 0; min-height: 100vh; background: var(--bg); }
+    .arisanku-content { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    .ak-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 1.4rem; box-shadow: var(--shadow-sm); margin-bottom: 1.2rem; }
+    .ak-intro { padding: 1.5rem; background: linear-gradient(135deg,#f5f3ff,#fff); border-radius: 16px; margin-bottom: 1.2rem; }
+    .ak-intro h1 { margin: .25rem 0; font-size: clamp(1.6rem,4vw,2.2rem); }
+    .ak-intro p, .ak-muted { color: var(--text-mid); line-height: 1.6; }
+    .ak-eyebrow { color: #7B1FA2; font-size: .7rem; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    .ak-tabs { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .ak-tab { border: 1px solid var(--border); background: var(--bg-card); color: var(--text-mid); padding: .7rem 1rem; border-radius: 11px; font: 700 .9rem 'Outfit',sans-serif; cursor: pointer; }
+    .ak-tab.active { color: #fff; background: #7B1FA2; border-color: #7B1FA2; }
+    .ak-panel[hidden] { display: none; }
+    .ak-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 1rem; }
+    .ak-field { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+    .ak-field label { font-weight: 700; font-size: .85rem; }
+    .ak-field input { padding: .8rem .9rem; background: #fff; border: 1px solid var(--border); border-radius: 10px; color: var(--text-dark); font: 500 .95rem 'Inter',sans-serif; }
+    .ak-actions { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-top: .8rem; }
+    .ak-btn { border: 0; border-radius: 10px; padding: .7rem 1rem; background: #7B1FA2; color: #fff; font: 700 .88rem 'Outfit',sans-serif; cursor: pointer; }
+    .ak-btn.secondary { color: var(--text-dark); background: #f1f5f9; border: 1px solid var(--border); }
+    .ak-btn.danger { background: #c62828; }
+    .ak-btn:disabled, input:disabled { opacity: .55; cursor: not-allowed; }
+    .ak-list { display: flex; flex-direction: column; gap: .5rem; margin-top: .8rem; }
+    .ak-person { display: flex; align-items: center; justify-content: space-between; gap: .7rem; border: 1px solid var(--border); border-radius: 10px; padding: .65rem .8rem; background: #fff; }
+    .ak-summary { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: .8rem; margin: 1rem 0; }
+    .ak-stat { padding: .9rem; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; }
+    .ak-stat strong { display: block; font-size: 1.15rem; margin-top: .2rem; }
+    .ak-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+    .ak-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+    .ak-table th, .ak-table td { padding: .75rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+    .ak-table th { background: #f8fafc; font-size: .72rem; color: var(--text-light); text-transform: uppercase; }
+    .ak-check { width: 20px; height: 20px; accent-color: #7B1FA2; }
+    .ak-month { margin: .8rem 0; padding: 1rem; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+    .ak-month h3 { margin: 0 0 .6rem; font-size: 1rem; }
+    .ak-badge { display: inline-block; padding: .2rem .55rem; border-radius: 20px; background: #f3e5f5; color: #7B1FA2; font-size: .75rem; font-weight: 800; }
+    #ak-message { margin-bottom: .8rem; color: var(--text-mid); font-size: .9rem; }
+    @media(max-width:600px) { .arisanku-content { padding: 1rem; } .ak-card { padding: 1rem; } }
+  </style>
+</head>
+<body>
+  <main class="konten-utama">
+    <div class="topbar">
+      <div class="topbar-inner">
+        <a href="../dashboard.html" class="btn-back" aria-label="Kembali ke dashboard" style="text-decoration:none">❮</a>
+        <p class="topbar-judul">ArisanKu</p>
+        <div style="display:flex;align-items:center;gap:12px"><p class="topbar-user" id="ak-user" style="text-align:right;margin:0;line-height:1.2;font-size:.75rem"></p><button id="ak-logout" title="Keluar" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:white;width:34px;height:34px;border-radius:8px;cursor:pointer">🚪</button></div>
+      </div>
+    </div>
+    <section class="arisanku-content">
+      <div class="ak-intro"><span class="ak-eyebrow">Modul Arisan Terpisah</span><h1>ArisanKu</h1><p>Atur peserta dan nominal, lakukan pengocokan acak, lalu pantau status pembayaran dan penerimaan arisan.</p></div>
+      <div id="ak-message" role="status" aria-live="polite">Memuat data ArisanKu…</div>
+      <nav class="ak-tabs" aria-label="Menu ArisanKu">
+        <button class="ak-tab active" data-panel="settings">⚙️ Pengaturan</button>
+        <button class="ak-tab" data-panel="draw">🎲 Pengocokan</button>
+        <button class="ak-tab" data-panel="payments">💳 Pembayaran Bulanan</button>
+        <button class="ak-tab" data-panel="recipients">🏆 Penerima Arisan</button>
+      </nav>
+
+      <section class="ak-panel ak-card" id="panel-settings">
+        <h2>Pengaturan Arisan</h2>
+        <p class="ak-muted">Tambahkan seluruh peserta, tetapkan nominal, dan tentukan lama satu putaran.</p>
+        <div class="ak-grid">
+          <div class="ak-field"><label for="ak-amount">Nominal arisan per peserta (Rp)</label><input id="ak-amount" type="number" min="1" step="1000" placeholder="Contoh: 100000"></div>
+          <div class="ak-field"><label for="ak-months">Jumlah bulan dalam satu putaran</label><input id="ak-months" type="number" min="1" step="1" placeholder="Contoh: 4"></div>
+          <div class="ak-field"><label for="ak-start-month">Bulan awal pengocokan</label><select id="ak-start-month" style="padding:.8rem .9rem;background:#fff;border:1px solid var(--border);border-radius:10px;color:var(--text-dark);font:500 .95rem 'Inter',sans-serif"><option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option><option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option><option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option><option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option></select></div>
+        </div>
+        <div class="ak-field"><label for="ak-name">Nama peserta</label><div class="ak-actions" style="margin-top:0"><input id="ak-name" type="text" placeholder="Ketik nama peserta lalu tekan Tambah" style="flex:1;min-width:220px;padding:.8rem .9rem;border:1px solid var(--border);border-radius:10px" maxlength="100"><button id="ak-add" class="ak-btn">+ Tambah Peserta</button></div></div>
+        <div id="ak-participants" class="ak-list"></div>
+        <div class="ak-summary">
+          <div class="ak-stat">Jumlah peserta<strong id="ak-count">0</strong></div>
+          <div class="ak-stat">Perkiraan kocokan per bulan<strong id="ak-per-month">—</strong></div>
+        </div>
+        <p class="ak-muted" id="ak-formula">Jumlah kocokan dibagi seimbang dari jumlah peserta ke jumlah bulan.</p>
+        <div class="ak-actions"><button id="ak-save-settings" class="ak-btn">Simpan Pengaturan</button></div>
+      </section>
+
+      <section class="ak-panel ak-card" id="panel-draw" hidden>
+        <h2>Pengocokan Peserta</h2>
+        <p class="ak-muted">Tekan tombol untuk mengacak seluruh peserta. Hasil dibagi ke bulan-bulan putaran; jika pembagian tidak bulat, jumlah peserta per bulan berbeda paling banyak satu orang.</p>
+        <div class="ak-summary"><div class="ak-stat">Nominal per peserta<strong id="ak-draw-amount">Rp 0</strong></div><div class="ak-stat">Lama putaran<strong id="ak-draw-months">0 bulan</strong></div><div class="ak-stat">Jumlah peserta<strong id="ak-draw-count">0</strong></div></div>
+        <div class="ak-actions"><button id="ak-shuffle" class="ak-btn">🎲 Acak Urutan Peserta</button><span class="ak-muted" id="ak-draw-date"></span></div>
+        <div id="ak-draw-result" style="margin-top:1rem"></div>
+      </section>
+
+      <section class="ak-panel ak-card" id="panel-payments" hidden>
+        <h2>Pembayaran Bulanan</h2>
+        <p class="ak-muted">Buat periode pembayaran untuk setiap bulan. Catat status dan tanggal bayar masing-masing peserta secara terpisah di setiap periode.</p>
+        <div class="ak-actions" style="margin:1rem 0">
+          <label for="ak-period-month" style="font-weight:700">Bulan periode</label>
+          <input id="ak-period-month" type="month" style="padding:.65rem .75rem;border:1px solid var(--border);border-radius:9px" aria-label="Bulan periode pembayaran">
+          <button id="ak-create-period" class="ak-btn">+ Buat Periode</button>
+          <label for="ak-period-select" style="font-weight:700;margin-left:.5rem">Periode</label>
+          <select id="ak-period-select" style="padding:.65rem .75rem;border:1px solid var(--border);border-radius:9px;min-width:170px"></select>
+        </div>
+        <div class="ak-table-wrap"><table class="ak-table"><thead><tr><th>Peserta</th><th>Nominal</th><th>Sudah membayar</th><th>Tanggal bayar</th></tr></thead><tbody id="ak-payment-rows"></tbody></table></div>
+        <p id="ak-no-participants" class="ak-muted" hidden>Belum ada peserta. Tambahkan peserta melalui menu Pengaturan.</p>
+        <p id="ak-no-period" class="ak-muted">Pilih bulan lalu buat periode pembayaran untuk mulai mencatat pembayaran.</p>
+      </section>
+
+      <section class="ak-panel ak-card" id="panel-recipients" hidden>
+        <h2>Penerima Arisan</h2>
+        <p class="ak-muted">Catat peserta hanya saat menerima arisan. Bagian ini terpisah dari pembayaran bulanan.</p>
+        <div class="ak-table-wrap"><table class="ak-table"><thead><tr><th>Peserta</th><th>Bulan kocokan</th><th>Sudah menerima</th><th>Tanggal menerima</th></tr></thead><tbody id="ak-recipient-rows"></tbody></table></div>
+        <p id="ak-no-recipients" class="ak-muted">Belum ada peserta yang menerima arisan.</p>
+      </section>
+    </section>
+  </main>
+
+  <script type="module">
+    import { db } from '../js/firebase-config.js';
+    import { ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+    const user = JSON.parse(sessionStorage.getItem('kromoredjo_user') || 'null');
+    if (!user) location.href = '../dashboard.html';
+    else {
+      const roles = { admin: '👑 Admin', pengurus: '🛡️ Pengurus', anggota: '🔑 Anggota', guest: '👤 Tamu' };
+      document.getElementById('ak-user').innerHTML = `${roles[user.level] || user.level}<br>${user.username || ''}`;
+    }
+    const canManage = user && ['admin', 'pengurus'].includes(user.level);
+    const state = { nominal: 0, months: 1, startMonth: new Date().getMonth(), participants: [], draw: null, payments: {}, paymentPeriods: [], recipients: {} };
+    let selectedPeriodId = '';
+    const msg = document.getElementById('ak-message');
+    const dataRef = ref(db, 'arisanku');
+    const html = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+    const formatRupiah = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(amount) || 0);
+    const todayLocal = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
+    const monthNames = Array.from({ length: 12 }, (_, month) => new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2020, month, 1)));
+    const drawMonthName = (index) => monthNames[((Number(state.draw?.startMonth ?? state.startMonth) + index) % 12 + 12) % 12];
+    const makeId = () => globalThis.crypto?.randomUUID?.() || `ak-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const notify = (text, isError = false) => { msg.textContent = text; msg.style.color = isError ? '#c62828' : 'var(--text-mid)'; };
+
+    function normalize(data) {
+      const draw = data?.draw && Array.isArray(data.draw.months) ? {
+        createdAt: data.draw.createdAt || new Date().toISOString(),
+        startMonth: Number.isInteger(Number(data.draw.startMonth)) && Number(data.draw.startMonth) >= 0 && Number(data.draw.startMonth) <= 11 ? Number(data.draw.startMonth) : Number(data?.startMonth),
+        months: data.draw.months.map(month => ({ participants: Array.isArray(month?.participants) ? month.participants.map(String) : [] })),
+        participantIds: Array.isArray(data.draw.participantIds)
+          ? data.draw.participantIds.map(String)
+          : data.draw.months.flatMap(month => Array.isArray(month?.participants) ? month.participants.map(String) : [])
+      } : null;
+      return {
+        nominal: Math.max(0, Number(data?.nominal) || 0),
+        months: Math.max(1, Math.floor(Number(data?.months) || 1)),
+        startMonth: Number.isInteger(Number(data?.startMonth)) && Number(data.startMonth) >= 0 && Number(data.startMonth) <= 11 ? Number(data.startMonth) : new Date().getMonth(),
+        participants: Array.isArray(data?.participants) ? data.participants.filter(p => p && p.id && p.name).map(p => ({ id: String(p.id), name: String(p.name) })) : [],
+        draw,
+        payments: data?.payments && typeof data.payments === 'object' ? data.payments : {},
+        paymentPeriods: (Array.isArray(data?.paymentPeriods) ? data.paymentPeriods : Object.values(data?.paymentPeriods || {})).filter(period => period && period.id && (period.periodMonth || period.periodDate)).map(period => {
+          const periodMonth = String(period.periodMonth || period.periodDate).slice(0, 7);
+          return { id: periodMonth, periodMonth, payments: period.payments && typeof period.payments === 'object' ? period.payments : {} };
+        }),
+        recipients: data?.recipients && typeof data.recipients === 'object' ? data.recipients : Object.fromEntries(Object.entries(data?.payments || {}).filter(([, status]) => status?.received).map(([id, status]) => [id, { received: true, receivedDate: status.drawDate || '' }]))
+      };
+    }
+
+    async function saveState(successMessage) {
+      if (!canManage) return notify('Hanya pengurus/bendahara yang dapat mengubah data.', true);
+      try {
+        await set(dataRef, state);
+        notify(successMessage);
+      } catch (error) {
+        console.error('Gagal menyimpan data ArisanKu:', error);
+        notify('Data gagal disimpan ke database. Periksa koneksi dan akses Firebase.', true);
+      }
+    }
+
+    function renderSettings() {
+      document.getElementById('ak-count').textContent = state.participants.length;
+      const months = Math.max(1, Math.floor(Number(document.getElementById('ak-months').value) || state.months || 1));
+      const count = state.participants.length;
+      const quotient = Math.floor(count / months);
+      const remainder = count % months;
+      document.getElementById('ak-per-month').textContent = count ? (remainder ? `${quotient}–${quotient + 1} orang` : `${quotient} orang`) : '—';
+      document.getElementById('ak-formula').textContent = count ? `${count} peserta ÷ ${months} bulan = ${quotient} orang per bulan${remainder ? `, dengan ${remainder} bulan mendapat 1 peserta tambahan` : ''}.` : 'Jumlah kocokan dibagi seimbang dari jumlah peserta ke jumlah bulan.';
+      const list = document.getElementById('ak-participants');
+      list.innerHTML = state.participants.length ? state.participants.map((p, index) => `<div class="ak-person"><span><span class="ak-badge">${index + 1}</span> ${html(p.name)}</span>${canManage ? `<button class="ak-btn danger ak-remove" data-id="${html(p.id)}" type="button" aria-label="Hapus ${html(p.name)}">Hapus</button>` : ''}</div>`).join('') : '<p class="ak-muted">Belum ada peserta yang ditambahkan.</p>';
+      document.querySelectorAll('.ak-manager-only').forEach(el => el.style.display = canManage ? '' : 'none');
+    }
+
+    function getDrawMonthByParticipant() {
+      const map = new Map();
+      (state.draw?.months || []).forEach((month, index) => (month.participants || []).forEach(id => map.set(String(id), index + 1)));
+      return map;
+    }
+
+    function renderDraw() {
+      document.getElementById('ak-draw-amount').textContent = formatRupiah(state.nominal);
+      document.getElementById('ak-draw-months').textContent = `${state.months} bulan`;
+      document.getElementById('ak-draw-count').textContent = state.participants.length;
+      const result = document.getElementById('ak-draw-result');
+      const drawDate = document.getElementById('ak-draw-date');
+      if (!state.draw) {
+        result.innerHTML = '<p class="ak-muted">Belum ada hasil pengocokan. Atur peserta dan jumlah bulan, lalu lakukan pengocokan.</p>';
+        drawDate.textContent = '';
+        return;
+      }
+      drawDate.textContent = `Diacak: ${new Date(state.draw.createdAt).toLocaleString('id-ID')}`;
+      const names = new Map(state.participants.map(p => [String(p.id), p.name]));
+      result.innerHTML = state.draw.months.map((month, index) => `<div class="ak-month"><h3>${html(drawMonthName(index))} <span class="ak-badge">${month.participants.length} kocokan</span></h3>${month.participants.length ? `<ol>${month.participants.map(id => `<li>${html(names.get(String(id)) || 'Peserta tidak ditemukan')}</li>`).join('')}</ol>` : '<p class="ak-muted">Tidak ada kocokan bulan ini.</p>'}</div>`).join('');
+    }
+
+    function renderPayments() {
+      const tbody = document.getElementById('ak-payment-rows');
+      const noParticipants = document.getElementById('ak-no-participants');
+      noParticipants.hidden = state.participants.length > 0;
+      const periodSelect = document.getElementById('ak-period-select');
+      if (!state.paymentPeriods.some(period => period.id === selectedPeriodId)) selectedPeriodId = state.paymentPeriods.at(-1)?.id || '';
+      periodSelect.innerHTML = state.paymentPeriods.length
+        ? state.paymentPeriods.map(period => `<option value="${html(period.id)}" ${period.id === selectedPeriodId ? 'selected' : ''}>${html(formatPeriod(period.periodMonth))}</option>`).join('')
+        : '<option value="">Belum ada periode</option>';
+      const activePeriod = state.paymentPeriods.find(period => period.id === selectedPeriodId);
+      document.getElementById('ak-no-period').hidden = Boolean(activePeriod);
+      tbody.innerHTML = activePeriod ? state.participants.map(p => {
+        const payment = activePeriod.payments[p.id] || {};
+        return `<tr><td>${html(p.name)}</td><td>${formatRupiah(state.nominal)}</td><td><label><input class="ak-check ak-period-payment" type="checkbox" data-id="${html(p.id)}" ${payment.paid ? 'checked' : ''} ${canManage ? '' : 'disabled'} aria-label="${html(p.name)} sudah membayar"></label> ${payment.paid ? 'Sudah' : 'Belum'}</td><td><input class="ak-paid-date" type="date" data-id="${html(p.id)}" value="${html(payment.paidDate || '')}" ${canManage && payment.paid ? '' : 'disabled'} style="padding:.45rem;border:1px solid var(--border);border-radius:8px" aria-label="Tanggal bayar ${html(p.name)}"></td></tr>`;
+      }).join('') : '';
+    }
+
+    function formatPeriod(periodMonth) {
+      if (!/^\d{4}-\d{2}$/.test(String(periodMonth))) return String(periodMonth || '—');
+      const [year, month] = String(periodMonth).split('-').map(Number);
+      return new Date(year, month - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    }
+
+    function renderRecipients() {
+      const monthByParticipant = getDrawMonthByParticipant();
+      const rows = document.getElementById('ak-recipient-rows');
+      const hasReceived = state.participants.some(p => state.recipients[p.id]?.received);
+      document.getElementById('ak-no-recipients').hidden = hasReceived;
+      rows.innerHTML = state.participants.map(p => {
+        const recipient = state.recipients[p.id] || {};
+        const month = monthByParticipant.get(String(p.id));
+        return `<tr><td>${html(p.name)}</td><td>${month ? html(drawMonthName(month - 1)) : 'Belum dikocok'}</td><td><label><input class="ak-check ak-recipient-check" type="checkbox" data-id="${html(p.id)}" ${recipient.received ? 'checked' : ''} ${canManage && month ? '' : 'disabled'} aria-label="${html(p.name)} sudah menerima arisan"></label> ${recipient.received ? 'Sudah menerima' : 'Belum menerima'}</td><td><input class="ak-received-date" type="date" data-id="${html(p.id)}" value="${html(recipient.receivedDate || '')}" ${canManage && month && recipient.received ? '' : 'disabled'} style="padding:.45rem;border:1px solid var(--border);border-radius:8px" aria-label="Tanggal menerima arisan ${html(p.name)}"></td></tr>`;
+      }).join('');
+    }
+
+    function renderAll() { renderSettings(); renderDraw(); renderPayments(); renderRecipients(); }
+
+    document.querySelectorAll('.ak-tab').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('.ak-tab').forEach(tab => tab.classList.toggle('active', tab === button));
+      document.querySelectorAll('.ak-panel').forEach(panel => panel.hidden = panel.id !== `panel-${button.dataset.panel}`);
+    }));
+    document.getElementById('ak-logout').addEventListener('click', () => { sessionStorage.removeItem('kromoredjo_user'); location.href = '../dashboard.html'; });
+
+    ['ak-amount', 'ak-months', 'ak-start-month', 'ak-name', 'ak-add', 'ak-save-settings', 'ak-shuffle', 'ak-period-month', 'ak-create-period'].forEach(id => {
+      const element = document.getElementById(id);
+      if (element && 'disabled' in element) element.disabled = !canManage;
+    });
+    document.getElementById('ak-period-month').value = todayLocal().slice(0, 7);
+    document.getElementById('ak-period-select').addEventListener('change', event => {
+      selectedPeriodId = event.target.value;
+      renderPayments();
+    });
+    document.getElementById('ak-create-period').addEventListener('click', async () => {
+      const periodMonth = document.getElementById('ak-period-month').value;
+      const monthNumber = Number(periodMonth.slice(5, 7));
+      if (!/^\d{4}-\d{2}$/.test(periodMonth) || monthNumber < 1 || monthNumber > 12) return notify('Pilih bulan periode terlebih dahulu.', true);
+      if (state.paymentPeriods.some(period => period.periodMonth === periodMonth)) return notify('Periode bulan tersebut sudah ada.', true);
+      const period = { id: periodMonth, periodMonth, payments: {} };
+      state.paymentPeriods.push(period);
+      selectedPeriodId = period.id;
+      renderPayments();
+      await saveState('Periode pembayaran berhasil dibuat.');
+    });
+
+    document.getElementById('ak-months').addEventListener('input', () => {
+      const months = Math.max(1, Math.floor(Number(document.getElementById('ak-months').value) || 1));
+      const count = state.participants.length;
+      const q = Math.floor(count / months), r = count % months;
+      document.getElementById('ak-per-month').textContent = count ? (r ? `${q}–${q + 1} orang` : `${q} orang`) : '—';
+      document.getElementById('ak-formula').textContent = count ? `${count} peserta ÷ ${months} bulan = ${q} orang per bulan${r ? `, dengan ${r} bulan mendapat 1 peserta tambahan` : ''}.` : 'Jumlah kocokan dibagi seimbang dari jumlah peserta ke jumlah bulan.';
+    });
+
+    function addParticipant() {
+      const input = document.getElementById('ak-name');
+      const name = input.value.trim();
+      if (!name) return notify('Masukkan nama peserta terlebih dahulu.', true);
+      if (state.participants.some(p => p.name.toLocaleLowerCase('id-ID') === name.toLocaleLowerCase('id-ID'))) return notify('Nama peserta tersebut sudah ada.', true);
+      state.participants.push({ id: makeId(), name });
+      input.value = '';
+      renderAll();
+      notify('Nama peserta ditambahkan. Tekan Simpan Pengaturan untuk menyimpan perubahan.');
+    }
+    document.getElementById('ak-add').addEventListener('click', addParticipant);
+    document.getElementById('ak-name').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); addParticipant(); } });
+    document.getElementById('ak-participants').addEventListener('click', event => {
+      const button = event.target.closest('.ak-remove');
+      if (!button || !canManage) return;
+      state.participants = state.participants.filter(p => p.id !== button.dataset.id);
+      renderAll();
+      notify('Peserta dihapus dari daftar sementara. Simpan Pengaturan untuk menerapkan perubahan.');
+    });
+
+    document.getElementById('ak-save-settings').addEventListener('click', async () => {
+      const amount = Number(document.getElementById('ak-amount').value);
+      const months = Number(document.getElementById('ak-months').value);
+      const startMonth = Number(document.getElementById('ak-start-month').value);
+      if (!Number.isFinite(amount) || amount <= 0) return notify('Nominal arisan harus lebih besar dari 0.', true);
+      if (!Number.isInteger(months) || months < 1) return notify('Jumlah bulan harus berupa bilangan bulat minimal 1.', true);
+      if (!Number.isInteger(startMonth) || startMonth < 0 || startMonth > 11) return notify('Pilih bulan awal pengocokan yang valid.', true);
+      const currentIds = new Set(state.participants.map(p => p.id));
+      const drawnIds = new Set(state.draw?.participantIds || []);
+      const rosterChanged = months !== state.months || startMonth !== state.startMonth || Boolean(state.draw && (currentIds.size !== drawnIds.size || [...currentIds].some(id => !drawnIds.has(id))));
+      if (state.draw && rosterChanged && !confirm('Perubahan peserta atau jumlah bulan akan menghapus hasil kocokan lama. Lanjutkan?')) return;
+      state.nominal = amount;
+      state.months = months;
+      state.startMonth = startMonth;
+      if (state.draw && rosterChanged) state.draw = null;
+      renderAll();
+      await saveState('Pengaturan ArisanKu berhasil disimpan.');
+    });
+
+    document.getElementById('ak-shuffle').addEventListener('click', async () => {
+      if (!state.participants.length) return notify('Tambahkan peserta terlebih dahulu sebelum mengocok.', true);
+      const amount = Number(document.getElementById('ak-amount').value);
+      const months = Number(document.getElementById('ak-months').value);
+      const startMonth = Number(document.getElementById('ak-start-month').value);
+      if (!Number.isFinite(amount) || amount <= 0) return notify('Atur nominal arisan lebih besar dari 0 terlebih dahulu.', true);
+      if (!Number.isInteger(months) || months < 1) return notify('Jumlah bulan belum valid.', true);
+      if (!Number.isInteger(startMonth) || startMonth < 0 || startMonth > 11) return notify('Pilih bulan awal pengocokan yang valid.', true);
+      if (state.draw && !confirm('Hasil kocokan lama akan diganti. Lanjutkan pengocokan baru?')) return;
+      state.nominal = amount;
+      state.months = months;
+      state.startMonth = startMonth;
+      const shuffled = [...state.participants];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const base = Math.floor(shuffled.length / state.months);
+      const remainder = shuffled.length % state.months;
+      let offset = 0;
+      const drawMonths = Array.from({ length: state.months }, (_, index) => {
+        const size = base + (index < remainder ? 1 : 0);
+        const ids = shuffled.slice(offset, offset + size).map(p => p.id);
+        offset += size;
+        return { participants: ids };
+      });
+      state.draw = { createdAt: new Date().toISOString(), startMonth, participantIds: shuffled.map(p => p.id), months: drawMonths };
+      state.payments = Object.fromEntries(state.participants.map(p => [p.id, { paid: false, received: false }]));
+      state.recipients = {};
+      renderAll();
+      await saveState('Pengocokan berhasil dan seluruh peserta telah dijadwalkan.');
+    });
+
+    document.getElementById('ak-payment-rows').addEventListener('change', async event => {
+      const checkbox = event.target.closest('.ak-period-payment');
+      const dateInput = event.target.closest('.ak-paid-date');
+      if (!canManage || (!checkbox && !dateInput)) return;
+      const period = state.paymentPeriods.find(item => item.id === selectedPeriodId);
+      if (!period) return notify('Pilih atau buat periode pembayaran terlebih dahulu.', true);
+      const id = (checkbox || dateInput).dataset.id;
+      const payment = { ...(period.payments[id] || {}) };
+      if (checkbox) {
+        payment.paid = checkbox.checked;
+        if (!checkbox.checked) payment.paidDate = '';
+        else if (!payment.paidDate) payment.paidDate = todayLocal();
+      }
+      if (dateInput) payment.paidDate = dateInput.value;
+      period.payments[id] = payment;
+      renderPayments();
+      await saveState(dateInput ? 'Tanggal pembayaran berhasil disimpan.' : 'Status pembayaran periode berhasil diperbarui.');
+    });
+
+    document.getElementById('ak-recipient-rows').addEventListener('change', async event => {
+      const checkbox = event.target.closest('.ak-recipient-check');
+      const dateInput = event.target.closest('.ak-received-date');
+      if (!canManage || (!checkbox && !dateInput)) return;
+      const id = (checkbox || dateInput).dataset.id;
+      const recipient = { ...(state.recipients[id] || {}) };
+      if (checkbox) {
+        recipient.received = checkbox.checked;
+        if (checkbox.checked && !recipient.receivedDate) recipient.receivedDate = todayLocal();
+        if (!checkbox.checked) recipient.receivedDate = '';
+      }
+      if (dateInput) recipient.receivedDate = dateInput.value;
+      state.recipients[id] = recipient;
+      renderRecipients();
+      await saveState(dateInput ? 'Tanggal penerimaan arisan berhasil disimpan.' : 'Status penerima arisan berhasil diperbarui.');
+    });
+
+    if (!canManage) notify('Mode lihat saja. Hanya admin/pengurus yang dapat mengatur peserta, mengocok, dan memperbarui status.');
+    onValue(dataRef, snapshot => {
+      state.nominal = 0; state.months = 1; state.startMonth = new Date().getMonth(); state.participants = []; state.draw = null; state.payments = {}; state.paymentPeriods = []; state.recipients = {};
+      Object.assign(state, normalize(snapshot.val()));
+      document.getElementById('ak-amount').value = state.nominal || '';
+      document.getElementById('ak-months').value = state.months || 1;
+      document.getElementById('ak-start-month').value = String(state.startMonth);
+      renderAll();
+      if (canManage) notify(snapshot.exists() ? 'Data ArisanKu tersinkron dari database.' : 'Mulai dengan mengatur peserta dan nominal ArisanKu.');
+      else notify('Mode lihat saja. Hanya admin/pengurus yang dapat mengubah data.');
+    }, error => {
+      console.error('Gagal membaca data ArisanKu:', error);
+      notify('Data ArisanKu tidak dapat dimuat. Periksa koneksi dan izin Firebase.', true);
+    });
+  </script>
+</body>
+</html>
