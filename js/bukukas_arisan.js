@@ -60,7 +60,7 @@ window.resetFilterBukuKas = function() {
 window.renderBukuKasArisan = function() {
     let transactions = [];
 
-    // 1. Proses Pemasukan dari Iuran Bulanan (Sosial & Tabungan)
+    // 1. Proses Pemasukan dari Iuran Bulanan (Kas, Sosial & Tabungan)
     const iuranBulanan = Array.isArray(dataMaster.arisan.iuran_bulanan) 
         ? dataMaster.arisan.iuran_bulanan 
         : Object.values(dataMaster.arisan.iuran_bulanan || {});
@@ -70,8 +70,10 @@ window.renderBukuKasArisan = function() {
             ? bulan.pembayaran 
             : Object.values(bulan.pembayaran || {});
 
+        let totalKasPeriode = 0;
         let totalSosialPeriode = 0;
         let totalTabunganPeriode = 0;
+        let jumlahOrangKas = 0;
         let jumlahOrangSosial = 0;
         let jumlahOrangTabungan = 0;
         // PERBAIKAN: Menggunakan tanggal akhir bulan dari periode, bukan tanggal 1.
@@ -95,6 +97,15 @@ window.renderBukuKasArisan = function() {
                     const defaultNom = member.nominalIuran || { sosial: 10000, tabungan: 5000 };
 
                     // Correct logic: Prioritize overrideNominal if it exists, otherwise use member's default.
+                    const hasKas = Boolean(kom.kas ?? kom.arisan);
+                    const kasAmount = p.overrideNominal
+                        ? (p.overrideNominal.kas ?? p.overrideNominal.arisan ?? 0)
+                        : (hasKas ? (defaultNom.kas || defaultNom.arisan || 50000) : 0);
+                    if (kasAmount > 0) {
+                        totalKasPeriode += kasAmount;
+                        jumlahOrangKas++;
+                    }
+
                     const sosialAmount = p.overrideNominal ? (p.overrideNominal.sosial || 0) : (kom.sosial ? (defaultNom.sosial || 10000) : 0);
                     if (sosialAmount > 0) {
                         totalSosialPeriode += sosialAmount;
@@ -110,6 +121,15 @@ window.renderBukuKasArisan = function() {
             }
         });
 
+        if (totalKasPeriode > 0) {
+            transactions.push({
+                tanggal: tglPeriode,
+                deskripsi: `Total pemasukan Kas (${bulan.periode}), ${jumlahOrangKas} orang`,
+                kategori: 'Kas',
+                tipe: 'masuk',
+                jumlah: totalKasPeriode
+            });
+        }
         if (totalSosialPeriode > 0) {
             transactions.push({
                 tanggal: tglPeriode,

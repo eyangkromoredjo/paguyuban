@@ -37,18 +37,34 @@ let filterAktif = 'semua', idHapusPending = null;
 
 let openedCardMemberIds = []; // Track opened cards untuk preserve state saat re-render
 
+let cachedData = null; // Cache data untuk performa
+
+let baganRendered = false; // Track apakah bagan sudah pernah dirender
+
 window.togglePasswordVisibility = togglePasswordVisibility;
 
 
 
 // 2. FUNGSI DATABASE UTAMA
 
-window.ambilData = async function() {
+window.ambilData = async function(forceRefresh = false) {
+
+  // Gunakan cache jika ada dan tidak force refresh
+  if (cachedData && !forceRefresh) {
+    return cachedData;
+  }
 
   const snapshot = await get(ref(db, "anggota"));
 
-  return snapshot.exists() ? Object.values(snapshot.val()) : [];
+  cachedData = snapshot.exists() ? Object.values(snapshot.val()) : [];
 
+  return cachedData;
+
+};
+
+// Fungsi untuk refresh cache setelah perubahan data
+window.refreshCache = function() {
+  cachedData = null;
 };
 
 // Test function untuk verify bukaEdit accessible
@@ -92,6 +108,9 @@ async function catatLog(aksi, detail = "") {
 async function simpanSatu(anggota) {
 
   await set(ref(db, "anggota/" + anggota.id), anggota);
+
+  // Refresh cache setelah menyimpan data
+  window.refreshCache();
 
 }
 
@@ -165,7 +184,7 @@ function proceedLogin(akun) {
 
   penggunaLogin = akun;
 
-  console.log('[DEBUG] User login:', akun);
+  console.log('[DEBUG] User login:', { username: akun.username, level: akun.level });
   console.log('[DEBUG] User level:', akun.level);
   console.log('[DEBUG] Hak akses:', HAK_AKSES[akun.level]);
 
@@ -284,6 +303,9 @@ function proceedLogin(akun) {
   toast('Selamat datang, ' + akun.nama);
 
   catatLog("Login", "Masuk ke aplikasi");
+
+  // Pre-load data in background untuk performa (non-blocking)
+  setTimeout(() => window.ambilData(), 100);
 
 }
 
@@ -1200,7 +1222,7 @@ const JABATAN_LIST = [
 
   { group: "Struktur Inti", roles: ["Penasihat", "Ketua Paguyuban", "Wakil Ketua", "Sekretaris", "Bendahara"] },
 
-  { group: "Seksi / Divisi", roles: ["Seksi Humas", "Seksi Acara", "Seksi Konsumsi", "Seksi Dana & Sosial", "Seksi Dokumentasi"] },
+  { group: "Seksi / Divisi", roles: ["Seksi Rohani", "Seksi Humas", "Seksi Acara", "Seksi Konsumsi", "Seksi Dana & Sosial", "Seksi Dokumentasi"] },
 
   { group: "Koordinator", roles: ["Koordinator Wilayah", "Perwakilan Generasi"] }
 
@@ -1581,7 +1603,15 @@ window.pohonBukaSemua = function(buka) {
 
 window.renderAnggota = async function() {
 
-  const data = await window.ambilData();
+  let container = document.getElementById('daftar-anggota');
+
+  if (container && !container.innerHTML) {
+    container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-light);">Memuat data...</div>';
+  }
+
+  // Selalu ambil data terbaru saat membuka Jabatan Pengurus karena status peserta
+  // dapat diperbarui dari modul Arisan tanpa memperbarui cache halaman ini.
+  const data = await window.ambilData(filterAktif === 'pengurus');
 
   // Hitung anggota per generasi (trah vs pasangan)
   const perGen = {};
@@ -1631,14 +1661,15 @@ window.renderAnggota = async function() {
 
   if (filterAktif === 'pengurus') {
 
-    const container = document.getElementById('daftar-pengurus');
+    const containerPengurus = document.getElementById('daftar-pengurus') || document.getElementById('sub-panel-pengurus');
 
-    if (!container) return;
+    if (!containerPengurus) return;
 
     console.log('[DEBUG] Rendering jabatan pengurus. User level:', penggunaLogin?.level);
-    console.log('[DEBUG] Admins and pengurus found:', data.filter(a => a.level === 'admin' || a.level === 'pengurus').length);
+    const pesertaAktif = data.filter(a => a.tipeArisan === 'pokok' || a.tipeArisan === 'non-pokok');
+    console.log('[DEBUG] Peserta aktif untuk daftar jabatan:', pesertaAktif.length);
 
-    const adminsAndPengurus = data.filter(a => a.level === 'admin' || a.level === 'pengurus');
+    const adminsAndPengurus = pesertaAktif;
 
     const isAdmin = penggunaLogin.level === 'admin';
 
@@ -1693,7 +1724,7 @@ window.renderAnggota = async function() {
         <table class="tabel-jabatan">
           <thead>
             <tr>
-              <th style="width: 35%;">Nama Pengurus</th>
+              <th style="width: 35%;">Nama Peserta Aktif</th>
               <th style="width: 45%;">Jabatan Organisasi</th>
               <th style="width: 20%; text-align: right;">Aksi</th>
             </tr>
@@ -1705,8 +1736,8 @@ window.renderAnggota = async function() {
       html += `
         <tr>
           <td colspan="3" style="text-align:center; padding:2rem 1rem; color:var(--cb); font-style:italic; font-size:0.85rem;">
-            Belum ada pengurus yang ditetapkan.<br>
-            <span style="font-size:0.75rem; opacity:0.7;">${canManage ? 'Gunakan form di bawah untuk menambahkan pengurus.' : 'Hubungi Admin untuk penetapan jabatan.'}</span>
+            Belum ada peserta aktif yang diatur sebagai pengurus.<br>
+            <span style="font-size:0.75rem; opacity:0.7;">${canManage ? 'Gunakan form di bawah untuk menambahkan jabatan.' : 'Hubungi Admin untuk penetapan jabatan.'}</span>
           </td>
         </tr>`;
     } else {
@@ -1714,7 +1745,7 @@ window.renderAnggota = async function() {
         html += `<tr>
           <td>
             <strong style="color:var(--text-dark); font-size:0.9rem;">${a.nama}</strong><br>
-            <span class="badge-level">${a.level.toUpperCase()}</span>
+            <span class="badge-level">${a.tipeArisan === 'pokok' ? 'PESERTA POKOK' : 'PESERTA NON-POKOK'}</span>
           </td>
           <td>
             ${canManage ? `
@@ -1747,9 +1778,8 @@ window.renderAnggota = async function() {
 
     if (canManage) {
 
-      // Kandidat adalah anggota yang sudah punya akses login (termasuk yang sudah jadi pengurus untuk bisa diubah jabatannya)
-
-      const kandidat = data.filter(a => a.bolehDaftar && a.kehidupan !== 'wafat' && a.level !== 'admin');
+      // Samakan sumber kandidat dengan Daftar Peserta Aktif.
+      const kandidat = pesertaAktif.filter(a => a.kehidupan !== 'wafat' && a.level !== 'admin');
 
       html += `
 
@@ -1787,17 +1817,17 @@ window.renderAnggota = async function() {
 
 
 
-    container.innerHTML = html;
+    containerPengurus.innerHTML = html;
 
-    console.log('[DEBUG] HTML inserted to container. Container children:', container.children.length);
+    console.log('[DEBUG] HTML inserted to container. Container children:', containerPengurus.children.length);
     console.log('[DEBUG] Container computed styles:', {
-      display: window.getComputedStyle(container).display,
-      visibility: window.getComputedStyle(container).visibility,
-      opacity: window.getComputedStyle(container).opacity,
-      height: window.getComputedStyle(container).height,
-      overflow: window.getComputedStyle(container).overflow
+      display: window.getComputedStyle(containerPengurus).display,
+      visibility: window.getComputedStyle(containerPengurus).visibility,
+      opacity: window.getComputedStyle(containerPengurus).opacity,
+      height: window.getComputedStyle(containerPengurus).height,
+      overflow: window.getComputedStyle(containerPengurus).overflow
     });
-    console.log('[DEBUG] Container innerHTML (first 500 chars):', container.innerHTML.substring(0, 500));
+    console.log('[DEBUG] Container innerHTML (first 500 chars):', containerPengurus.innerHTML.substring(0, 500));
 
 
     // Restore card state untuk halaman pengurus
@@ -1825,7 +1855,7 @@ window.renderAnggota = async function() {
   const searchInput = document.getElementById('search-anggota');
   const cari = (searchInput?.value || '').toLowerCase();
 
-  const container = document.getElementById('daftar-anggota');
+  container = document.getElementById('daftar-anggota');
 
   if (!container) return;
 
@@ -1967,10 +1997,10 @@ window.renderAnggota = async function() {
     return;
   }
 
-  const grupedData = {};
+  const groupedData = {};
 
   if (filterAktif === 'wafat') {
-grupedData['wafat'] = filtered;
+    groupedData['wafat'] = filtered;
 
   } else {
 
@@ -2351,17 +2381,25 @@ grupedData['wafat'] = filtered;
 
 window.renderBaganPengurus = async function() {
 
-  const data = await window.ambilData();
-
   const container = document.getElementById('bagan-organisasi-visual');
 
   if(!container) return;
+
+  // Tampilkan loading indicator
+  container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-light);">Memuat data struktur...</div>';
+
+  // Pre-fetch data in background if not cached
+  if (!cachedData) {
+    window.ambilData(); // Start fetching but don't await - let it cache in background
+  }
+
+  const data = await window.ambilData();
 
 
 
   const normalizeJabatan = (value) => {
 
-    const jab = String(value || '').toLowerCase().trim();
+    const jab = String(value || '').toLowerCase().trim().replace(/\s+\d+$/, '');
 
     if (!jab) return '';
 
@@ -2443,7 +2481,7 @@ window.renderBaganPengurus = async function() {
 
     const displayName = anggota.panggilan || anggota.nama;
 
-    return `<div class="bagan-card"><div class="bagan-avatar">${foto}</div><p class="bagan-nama">${displayName}</p><p class="bagan-jabatan">${anggota.jabatan || (anggota.level === 'admin' ? 'Penasihat' : 'Pengurus')}</p></div>`;
+    return `<div class="bagan-card"><div class="bagan-avatar">${foto}</div><div class="bagan-text"><p class="bagan-nama">${displayName}</p><p class="bagan-jabatan">${anggota.jabatan || (anggota.level === 'admin' ? 'Penasihat' : 'Pengurus')}</p></div></div>`;
 
   };
 
@@ -3347,13 +3385,28 @@ function updateTabunganPribadi(members) {
 
 window.bukaPanel = function(nama, el, pushState = true) {
 
+  const targetPanel = document.getElementById('panel-' + nama);
+  if (!targetPanel && nama === 'buku-besar') {
+    window.location.href = 'modules/bukukas_arisan.html';
+    return;
+  }
+  if (!targetPanel) {
+    console.warn(`Panel tidak ditemukan: panel-${nama}`);
+    return;
+  }
+
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('aktif'));
 
-  document.getElementById('panel-' + nama).classList.add('aktif');
+  targetPanel.classList.add('aktif');
 
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('aktif'));
 
 
+
+  // Pre-load data in background saat buka panel apapun untuk performa (non-blocking)
+  if (!cachedData) {
+    setTimeout(() => window.ambilData(), 50);
+  }
 
   // Update Judul Topbar sesuai panel yang aktif agar navigasi lebih jelas
 
@@ -3559,71 +3612,6 @@ window.addEventListener('popstate', (e) => {
   if (panel === 'anggota') {
 
     window.switchSubPanelAnggota(sub || 'menu', false);
-
-  }
-
-});
-
-
-
-// Re-check session on load
-
-window.addEventListener('load', () => {
-
-  const saved = sessionStorage.getItem('kromoredjo_user');
-
-  if (saved) {
-
-    const akun = JSON.parse(saved);
-
-    proceedLogin(akun);
-
-    
-
-    // Set initial state untuk history
-
-    const hash = window.location.hash.substring(1) || 'dashboard';
-
-
-
-    if (hash.startsWith('anggota-')) {
-
-      const sub = hash.replace('anggota-', '');
-
-      history.replaceState({ panel: 'anggota', sub: sub }, "", "#" + hash);
-
-      window.bukaPanel('anggota', null, false);
-
-      window.switchSubPanelAnggota(sub, false);
-
-    } else {
-
-      history.replaceState({ panel: hash }, "", "#" + hash);
-
-
-
-      // Sinkronisasi Panel berdasarkan hash URL (Contoh: #anggota)
-      if (hash) {
-      const panelMap = { 'anggota': 'anggota', 'logs': 'logs', 'dashboard': 'dashboard', 'buku-besar': 'buku-besar' };
-      if (panelMap[hash]) {
-        // Cari elemen navigasi terkait untuk memberikan class 'aktif'
-        const navItems = document.querySelectorAll('.nav-item');
-
-        let targetNav = null;
-
-        navItems.forEach(item => {
-
-          if (item.getAttribute('onclick')?.includes(`'${panelMap[hash]}'`)) targetNav = item;
-
-        });
-
-        window.bukaPanel(panelMap[hash], targetNav, false);
-
-      }
-
-    }
-
-    }
 
   }
 
@@ -4142,13 +4130,16 @@ window.simpanAnggota = async function() {
 
   await set(ref(db, "anggota/" + obj.id), obj);
 
+  // Refresh cache setelah menyimpan data
+  window.refreshCache();
+
   toast(id ? 'Data berhasil diperbarui.' : 'Anggota baru ditambahkan.');
 
   catatLog(id ? "Edit Anggota" : "Tambah Anggota", nama);
 
   window.tutupModal('modal-anggota');
 
-  
+
 
   // Reset tampilan ke semula setelah simpan
 

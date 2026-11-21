@@ -136,7 +136,7 @@
                             <div class="service-icon" style="background:linear-gradient(135deg,#E53935,#ff8a80)">📉</div>
                             <span class="service-label">Buku Pengeluaran</span>
                         </div>
-                        <div class="service-item" id="menu-bukubesar" onclick="location.href='../dashboard.html#buku-besar'">
+                        <div class="service-item" id="menu-bukubesar" onclick="location.href='../modules/bukukas_arisan.html'">
                             <div class="service-icon" style="background:linear-gradient(135deg,#4A148C,#AB47BC)">📖</div>
                             <span class="service-label">Buku Besar</span>
                         </div>
@@ -451,12 +451,12 @@
                     if (p.paid) {
                         const m = window.dataMaster.anggota.find(x => String(x.id) === String(p.memberId));
                         if (!m) return;
-                        const nom = m.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
-                        const kom = m.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
+                        const nom = m.nominalIuran || { kas: 50000, arisan: 50000, sosial: 25000, tabungan: 0 };
+                        const kom = m.iuranKomponen || { kas: true, arisan: true, sosial: true, tabungan: false };
 
                         memberAgg[p.memberId].lunasCount++;
-                        if (kom.arisan) memberAgg[p.memberId].tPokok += (parseInt(nom.arisan) || 0);
-                        if (kom.sosial) memberAgg[p.memberId].tSosial += (parseInt(nom.sosial) || 0);
+                        if (kom.kas || kom.arisan) memberAgg[p.memberId].tPokok += (parseInt(nom.kas || nom.arisan) || 50000);
+                        if (kom.sosial) memberAgg[p.memberId].tSosial += (parseInt(nom.sosial) || 25000);
                         if (kom.tabungan) memberAgg[p.memberId].tTab += (parseInt(nom.tabungan) || 0);
                         if (p.metodeBayar) memberAgg[p.memberId].methods.add(p.metodeBayar);
                     }
@@ -530,10 +530,10 @@
                     if (p.paid) {
                         const m = window.dataMaster.anggota.find(x => String(x.id) === String(p.memberId));
                         if (m) {
-                            const nom = m.nominalIuran || { arisan: 55000, sosial: 40000, tabungan: 5000 };
-                            const kom = m.iuranKomponen || { arisan: false, sosial: false, tabungan: false };
-                            if (kom.arisan) tPokokMasuk += (parseInt(nom.arisan) || 0);
-                            if (kom.sosial) tSosialMasuk += (parseInt(nom.sosial) || 0);
+                            const nom = m.nominalIuran || { kas: 50000, arisan: 50000, sosial: 25000, tabungan: 0 };
+                            const kom = m.iuranKomponen || { kas: true, arisan: true, sosial: true, tabungan: false };
+                            if (kom.kas || kom.arisan) tPokokMasuk += (parseInt(nom.kas || nom.arisan) || 50000);
+                            if (kom.sosial) tSosialMasuk += (parseInt(nom.sosial) || 25000);
                             if (kom.tabungan) tTabunganMasuk += (parseInt(nom.tabungan) || 0);
                         }
                     }
@@ -543,8 +543,8 @@
             const listEx = Array.isArray(window.dataMaster.arisan.pengeluaran) ? window.dataMaster.arisan.pengeluaran : Object.values(window.dataMaster.arisan.pengeluaran || {});
             const tKeluarSosial = listEx.reduce((sum, item) => sum + (parseInt(item.amount) || 0), 0);
             const listJadwal = Array.isArray(window.dataMaster.arisan.jadwal) ? window.dataMaster.arisan.jadwal : Object.values(window.dataMaster.arisan.jadwal || {});
-            const anggotaPokok = window.dataMaster.anggota.filter(m => m.iuranKomponen && m.iuranKomponen.arisan);
-            const tPotArisan = anggotaPokok.reduce((sum, m) => sum + (parseInt(m.nominalIuran?.arisan) || 55000), 0);
+            const anggotaPokok = window.dataMaster.anggota.filter(m => m.iuranKomponen && (m.iuranKomponen.kas || m.iuranKomponen.arisan));
+            const tPotArisan = anggotaPokok.reduce((sum, m) => sum + (parseInt(m.nominalIuran?.kas || m.nominalIuran?.arisan) || 50000), 0);
             const tPokokKeluar = listJadwal.length * tPotArisan;
 
             document.getElementById('val-putaran-pokok').textContent = formatRp(tPokokMasuk - tPokokKeluar);
